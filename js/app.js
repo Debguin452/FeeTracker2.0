@@ -39,76 +39,83 @@ import { getMessaging, getToken, onMessage }
   }
 })();
 
-// ── PROJECT 1 (primary — your existing project) ──────────────────────────
-const cfg1 = { apiKey:"AIzaSyDlpLbd5g78eHv_elhiiLRlOdhPMvn9ijA", authDomain:"feetracker2.pages.dev", projectId:"fee-tracker-f32f8", storageBucket:"fee-tracker-f32f8.firebasestorage.app", messagingSenderId:"1061066310105", appId:"1:1061066310105:web:4ca8c0feaa9d6614cd19c8" };
+let _app1, _app2, _db1, _db2, auth, messaging, VAPID_KEY;
+let db = null;
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
 
-// ── PROJECT 2 (secondary — fill in your second Firebase project config) ──
-// Create a second Firebase project at console.firebase.google.com,
-// paste its config object here, and users will be split 50/50 by UID hash.
-const cfg2 = {
-  apiKey:            "AIzaSyC3kDVo9dGdc5szhfY2z7AZdsQUoJs3YR0",
-  authDomain:        "feetracker2.firebaseapp.com",
-  projectId:         "feetracker2",
-  storageBucket:     "feetracker2.firebasestorage.app",
-  messagingSenderId: "748688802151",
-  appId:             "1:748688802151:web:3fdcaba9c2e6be7efb2fc2"
-};
+let _configCache = null;
 
-const _app1 = initializeApp(cfg1, 'primary');
-// Only init second app if the placeholder config has been filled in
-const _cfg2Ready = cfg2.apiKey && !cfg2.apiKey.startsWith('PASTE_');
-const _app2 = _cfg2Ready ? initializeApp(cfg2, 'secondary') : null;
+async function _fetchConfig() {
+  if (_configCache) return _configCache;
+  const cached = sessionStorage.getItem('ft_cfg');
+  if (cached) {
+    try { _configCache = JSON.parse(cached); return _configCache; } catch {}
+  }
+  const res = await fetch('/api/config', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
+  _configCache = await res.json();
+  try { sessionStorage.setItem('ft_cfg', JSON.stringify(_configCache)); } catch {}
+  return _configCache;
+}
 
-try {
-  initializeAppCheck(_app1, {
-    provider: new ReCaptchaV3Provider('6LfvBpIsAAAAAGwH54i-DnUY-UXEVqOnSFj944ex'),
-    isTokenAutoRefreshEnabled: true
-  });
-} catch(e) { console.warn('[AppCheck] init failed:', e.message); }
-
-const _db1 = getFirestore(_app1);
-const _db2 = _app2 ? getFirestore(_app2) : null;
-
-// ── Stable per-UID hash → always routes the same user to the same shard ──
 function _dbShard(uid) {
   let h = 0;
   for (let i = 0; i < uid.length; i++) h = (Math.imul(h, 31) + uid.charCodeAt(i)) | 0;
-  return (h >>> 0) % 2; // 0 = primary, 1 = secondary
+  return (h >>> 0) % 2;
 }
 function _pickDb(uid) {
-  if (!_db2) return _db1; // fallback: secondary not configured yet
+  if (!_db2) return _db1;
   return _dbShard(uid) === 0 ? _db1 : _db2;
 }
 
-// `db` is set to the correct shard inside bootApp / offline-boot,
-// before any Firestore collection refs are called.
-let db = _db1; // safe default until auth resolves
-
-const auth = getAuth(_app1);  // ✅ FIXED: must pass named app; no '[DEFAULT]' app exists
-const provider = new GoogleAuthProvider();
-
-// ── Enable Firestore offline persistence for both shards ─────────────────
-// This makes ALL Firestore reads/writes work offline. Writes are queued
-// in IndexedDB and automatically synced when connection restores.
 function _enablePersistence(dbInstance) {
-  enableIndexedDbPersistence(dbInstance).catch(e => {
-    if (e.code === 'failed-precondition') {
-      console.warn('[Firestore] Offline persistence: multiple tabs open');
-    } else if (e.code === 'unimplemented') {
-      console.warn('[Firestore] Offline persistence not supported in this browser');
+  enableIndexedDbPersistence(dbInstance).catch(() => {});
+}
+
+async function _initFirebase() {
+  const cfg = await _fetchConfig();
+  const c1  = cfg.firebase.primary;
+  const c2  = cfg.firebase.secondary;
+
+  _app1 = initializeApp(c1, 'primary');
+  _app2 = c2 ? initializeApp(c2, 'secondary') : null;
+
+  try {
+    initializeAppCheck(_app1, {
+      provider: new ReCaptchaV3Provider(cfg.recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {}
+
+  _db1 = getFirestore(_app1);
+  _db2 = _app2 ? getFirestore(_app2) : null;
+  db   = _db1;
+
+  _enablePersistence(_db1);
+  if (_db2) _enablePersistence(_db2);
+
+  auth      = getAuth(_app1);
+  VAPID_KEY = cfg.vapidKey;
+
+  try { messaging = getMessaging(_app1); } catch {}
+
+  await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+  const r = await getRedirectResult(auth).catch(e => {
+    if (e.code && e.code !== 'auth/no-current-user') toast('Login error: ' + e.code, 'error');
+    return null;
+  });
+  if (r?.user) await bootApp(r.user);
+
+  onAuthStateChanged(auth, async user => {
+    if (user) {
+      if (!loaded) await bootApp(user);
+    } else {
+      _handleSignedOut();
     }
   });
 }
-_enablePersistence(_db1);
-if (_db2) _enablePersistence(_db2);
-
-// FCM — safe init (fails gracefully if SW not supported)
-let messaging = null;
-try { messaging = getMessaging(_app1); } catch(e) { console.warn('[FCM] Not supported:', e); }  // ✅ FIXED: was _app (undefined)
-
-// Your VAPID key from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
-const VAPID_KEY = 'BDBRkVjHUVJ5cuWpmYtpiO-wHkLsTblOeAwrUfmcewOktc3rP28fUmTsAlNntrfAoiozhTxgQtw_W0SrdrH2HT4';
-provider.setCustomParameters({ prompt:'select_account' });
 
 // STATE
 let cu = null, teachers = {}, batches = {}, payments = [], searchQ = '', profile = {};
@@ -2427,17 +2434,6 @@ async function bootApp(user) {
   }
 }
 
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
-
-getRedirectResult(auth).then(async r => {
-  if (r?.user) await bootApp(r.user);
-}).catch(e => {
-  if (e.code && e.code !== 'auth/no-current-user') toast('Login error: '+e.code,'error');
-});
-
-// Snapshot uid synchronously BEFORE any Firebase async code runs.
-// onAuthStateChanged(null) fires when offline and wipes ft_uid —
-// this snapshot preserves it so the offline guard always works.
 const _cachedUidSnapshot = localStorage.getItem('ft_uid');
 let _offlineBooted = false;
 let _reconnecting  = false; // blocks false signout during reconnect window
@@ -2520,14 +2516,8 @@ setTimeout(() => {
   }
 }, 4000);
 
-// ── onAuthStateChanged ─────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    if (!loaded) await bootApp(user);
-  } else {
-    // Firebase fires null when offline — ignore if user was previously signed in
+function _handleSignedOut() {
     if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting || (Date.now()-(_onlineSince||0)<12000))) return;
-    // Real sign-out — clear everything
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
     try { localStorage.removeItem('ft_uid'); localStorage.removeItem('ft_db_shard'); } catch(e){}
@@ -2548,8 +2538,7 @@ onAuthStateChanged(auth, async user => {
     const lc=document.getElementById('loginContent');
     if(ls){ ls.classList.add('fade-out'); setTimeout(()=>{ls.classList.add('hidden');if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}},420); }
     else if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}
-  }
-});
+}
 
 document.getElementById('googleSignInBtn').addEventListener('click', async () => {
   const btn = document.getElementById('googleSignInBtn');
@@ -2557,9 +2546,7 @@ document.getElementById('googleSignInBtn').addEventListener('click', async () =>
   btn.disabled=true;
   document.getElementById('avatarEl')?.classList.add('loading');
   try {
-    // Try popup first — fastest, no full-page redirect
     await signInWithPopup(auth, provider);
-    // onAuthStateChanged fires → bootApp handles the rest
   } catch(e) {
     if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
       // Popup blocked (some mobile browsers) — fall back to redirect
@@ -4630,3 +4617,4 @@ window.exportHistoryCSV = function(){
   }
 };
 
+_initFirebase().catch(e => { console.error('[FeeTracker] init failed:', e); });
