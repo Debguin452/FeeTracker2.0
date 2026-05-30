@@ -53,7 +53,7 @@ let _configCache = null;
 
 async function _fetchConfig() {
   if (_configCache) return _configCache;
-  const cached = sessionStorage.getItem('ft_cfg');
+  const cached = sessionStorage.getItem('ft_cfg_v2');
   if (cached) {
     try { _configCache = JSON.parse(cached); return _configCache; } catch {}
   }
@@ -69,7 +69,7 @@ async function _fetchConfig() {
     throw new Error('Config fetch failed: ' + res.status);
   }
   _configCache = await res.json();
-  try { sessionStorage.setItem('ft_cfg', JSON.stringify(_configCache)); } catch {}
+  try { sessionStorage.setItem('ft_cfg_v2', JSON.stringify(_configCache)); } catch {}
   return _configCache;
 }
 
