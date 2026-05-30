@@ -64,7 +64,17 @@ export async function onRequest(context) {
 
   const secHeaders = new Headers(response.headers);
   secHeaders.set('X-Content-Type-Options', 'nosniff');
-  secHeaders.set('X-Frame-Options', 'DENY');
+
+  // /__/auth/* is used by Firebase Auth popup — it loads inside an iframe.
+  // Setting X-Frame-Options: DENY there breaks Google Sign-In entirely.
+  // All other pages use SAMEORIGIN (prevents third-party framing but allows
+  // Firebase's own same-origin iframe handshake).
+  if (url.pathname.startsWith('/__/auth')) {
+    secHeaders.delete('X-Frame-Options');
+  } else {
+    secHeaders.set('X-Frame-Options', 'SAMEORIGIN');
+  }
+
   secHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   secHeaders.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
