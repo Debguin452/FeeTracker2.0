@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Terms &amp; Conditions — Fee Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080812" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2fa" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.065);--border2:rgba(255,255,255,.11);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent4:#ff9a3c;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--red:#ff4d6d;--r-xl:22px;--r-lg:15px;--r-md:11px;--r-sm:7px;--card-shadow:0 1px 0 rgba(255,255,255,.04),0 4px 20px rgba(0,0,0,.3);}
+    :root.light{--bg:#f0f0f8;--surface:#ffffff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent4:#e07020;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--red:#d63050;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+    @keyframes ftSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes ftFadeIn{from{opacity:0}to{opacity:1}}
+    .blob{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;}
+    .blob1{width:500px;height:500px;background:radial-gradient(circle,rgba(124,107,255,.13) 0%,transparent 70%);top:-120px;left:-120px;}
+    .blob2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,157,.09) 0%,transparent 70%);bottom:-80px;right:-80px;}
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,16px) + 12px) 18px 12px;background:linear-gradient(180deg,var(--bg) 78%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+    .back-btn{width:38px;height:38px;border-radius:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,transform .12s;text-decoration:none;}
+    .back-btn:active{transform:scale(.9);background:var(--surface3);}
+    .topbar-info{flex:1;}
+    .topbar-label{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;font-weight:600;}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
+    .page{position:relative;z-index:1;padding:calc(env(safe-area-inset-top,16px) + 72px) 0 60px;max-width:720px;margin:0 auto;animation:ftFadeIn .35s ease both;}
+    .hero{padding:0 20px 36px;text-align:center;animation:ftSlideUp .35s ease both;}
+    .hero-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;}
+    .hero-icon{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);}
+    .hero-icon span{font-size:30px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;line-height:1;}
+    .hero-wordmark{text-align:left;}
+    .hero-wordmark-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 55%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero-wordmark-sub{font-size:10px;color:var(--muted);letter-spacing:4px;text-transform:uppercase;font-weight:600;}
+    :root.light .hero-wordmark-name{background:linear-gradient(140deg,#18182e 0%,#6255e8 55%,#e8527a 100%);-webkit-background-clip:text;background-clip:text;}
+    .hero-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.8px;margin-bottom:10px;color:var(--text);}
+    .hero-meta{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+    .hero-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text2);font-weight:500;white-space:nowrap;}
+    .content{padding:0 20px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:24px;margin-bottom:16px;box-shadow:var(--card-shadow);animation:ftSlideUp .35s ease both;}
+    .card-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;}
+    .card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .card-icon.purple{background:rgba(124,107,255,.14);color:var(--accent);}
+    .card-icon.pink{background:rgba(255,107,157,.12);color:var(--accent2);}
+    .card-icon.teal{background:rgba(0,212,170,.1);color:var(--accent3);}
+    .card-icon.orange{background:rgba(255,154,60,.12);color:var(--accent4);}
+    .card-icon.red{background:rgba(255,77,109,.1);color:var(--red);}
+    .card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:3px;}
+    .card-num{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+    .prose p{color:var(--text2);font-size:14px;line-height:1.75;margin-bottom:12px;}
+    .prose p:last-child{margin-bottom:0;}
+    .prose strong{color:var(--text);font-weight:600;}
+    .prose em{color:var(--accent);font-style:normal;font-weight:600;}
+    .highlight-box{background:var(--accent-dim);border:1px solid rgba(124,107,255,.2);border-radius:var(--r-lg);padding:14px 16px;margin:14px 0;display:flex;align-items:flex-start;gap:10px;}
+    .highlight-box.teal{background:rgba(0,212,170,.08);border-color:rgba(0,212,170,.2);}
+    .highlight-box.orange{background:rgba(255,154,60,.08);border-color:rgba(255,154,60,.2);}
+    .highlight-box.red{background:rgba(255,77,109,.07);border-color:rgba(255,77,109,.2);}
+    .highlight-box svg{flex-shrink:0;margin-top:1px;}
+    .highlight-box p{font-size:13px;color:var(--text2);line-height:1.6;margin:0;}
+    .highlight-box strong{color:var(--text);}
+    .toc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:20px;}
+    .toc-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px;}
+    .toc-list{list-style:none;display:flex;flex-direction:column;gap:4px;}
+    .toc-list a{font-size:13px;color:var(--text2);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;transition:color .15s;}
+    .toc-list a:hover{color:var(--accent);}
+    .toc-list a::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:.5;flex-shrink:0;}
+    .footer-note{text-align:center;padding:24px 20px 0;color:var(--muted);font-size:12px;line-height:1.8;}
+    .footer-note a{color:var(--accent);text-decoration:none;}
+    @media(min-width:680px){.card{padding:32px;}.content{padding:0 28px;}.hero{padding:0 28px 40px;}}
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+
+  <div class="topbar">
+    <a class="back-btn" href="index.html" aria-label="Back">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);flex-shrink:0;"><span style="font-size:18px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;line-height:1;">₹</span></div>
+    <div class="topbar-info">
+      <div class="topbar-label">Fee Tracker</div>
+      <div class="topbar-title">Terms &amp; Conditions</div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="hero">
+      <div class="hero-logo">
+        <div class="hero-icon"><span>₹</span></div>
+        <div class="hero-wordmark">
+          <div class="hero-wordmark-name">Fee Tracker</div>
+          <div class="hero-wordmark-sub">Smart · Simple · Personal</div>
+        </div>
+      </div>
+      <div class="hero-title">Terms &amp; Conditions</div>
+      <div class="hero-meta">
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M6 4v3M6 8.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Effective 1 June 2025</span>
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L7.5 4.5H11L8.5 6.5 9.5 10 6 8 2.5 10l1-3.5L1 4.5h3.5L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Jurisdiction: India</span>
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5h4M4 7.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>v2.0.1</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="toc">
+        <div class="toc-title">Contents</div>
+        <ul class="toc-list">
+          <li><a href="#t1">Definitions</a></li>
+          <li><a href="#t2">Acceptance of Terms</a></li>
+          <li><a href="#t3">Nature of the Service</a></li>
+          <li><a href="#t4">Eligibility &amp; Account Registration</a></li>
+          <li><a href="#t5">User Obligations &amp; Prohibited Conduct</a></li>
+          <li><a href="#t6">Intellectual Property</a></li>
+          <li><a href="#t7">User-Generated Content</a></li>
+          <li><a href="#t8">Service Availability &amp; Modifications</a></li>
+          <li><a href="#t9">Disclaimer of Warranties</a></li>
+          <li><a href="#t10">Limitation of Liability &amp; Indemnification</a></li>
+          <li><a href="#t11">Third-Party Services</a></li>
+          <li><a href="#t12">Termination</a></li>
+          <li><a href="#t13">Amendments</a></li>
+          <li><a href="#t14">Governing Law &amp; Dispute Resolution</a></li>
+          <li><a href="#t15">Miscellaneous</a></li>
+          <li><a href="#t16">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="highlight-box red">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="var(--red)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".8" fill="var(--red)"/></svg>
+        <p><strong>Important:</strong> By accessing or using Fee Tracker, you agree to be bound by these Terms. If you do not agree, you must not use the Service. The Operator is not liable for any damages, data loss, or financial consequences arising from your use of this Service.</p>
+      </div>
+
+      <div id="t1" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 9h8M5 6h5M5 12h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 1</div><div class="card-title">Definitions</div></div>
+        </div>
+        <div class="prose">
+          <p><strong>"Agreement"</strong> means these Terms and Conditions together with the Privacy Policy, which is incorporated by reference.</p>
+          <p><strong>"Service"</strong> means the Fee Tracker web application, progressive web application (PWA), and all associated features, APIs, and Cloudflare Functions accessible at the domain on which this Agreement is published.</p>
+          <p><strong>"Operator"</strong> means the individual developer who deploys, hosts, and maintains the Service. The Operator is the contracting party to this Agreement.</p>
+          <p><strong>"User"</strong> means any natural person who accesses, registers for, or uses the Service in any capacity, whether as a student-role or teacher-role account holder.</p>
+          <p><strong>"Content"</strong> means all data, information, text, records, and materials that a User inputs, uploads, or otherwise submits to the Service, including but not limited to teacher names, fee amounts, student names, batch records, and payment histories.</p>
+          <p><strong>"Firebase"</strong> means Google Firebase, the third-party cloud infrastructure used by the Service for authentication, data storage, and messaging.</p>
+          <p><strong>"Cloudflare Pages"</strong> means the hosting and edge-compute infrastructure provided by Cloudflare, Inc., on which the Service is deployed.</p>
+        </div>
+      </div>
+
+      <div id="t2" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L3 5v5c0 3.5 2.5 6.3 6 7 3.5-.7 6-3.5 6-7V5L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.5 9l2 2 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 2</div><div class="card-title">Acceptance of Terms</div></div>
+        </div>
+        <div class="prose">
+          <p>By accessing or using the Service in any manner, including but not limited to signing in with a Google account, entering data, or installing the Service as a Progressive Web Application, you represent and warrant that:</p>
+          <p><strong>(a)</strong> you have read, understood, and agree to be legally bound by this Agreement in its entirety;</p>
+          <p><strong>(b)</strong> you have the legal capacity to enter into a binding agreement under the laws of your jurisdiction;</p>
+          <p><strong>(c)</strong> if you are accessing the Service on behalf of an organisation, you have the authority to bind that organisation to this Agreement.</p>
+          <p>If you do not accept all terms of this Agreement, your sole remedy is to immediately cease all use of the Service and request deletion of your account data pursuant to the Privacy Policy.</p>
+          <p>Continued use of the Service following any amendment to this Agreement constitutes acceptance of the amended terms. The Operator recommends reviewing this Agreement periodically.</p>
+        </div>
+      </div>
+
+      <div id="t3" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6h.01M8 9h1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 3</div><div class="card-title">Nature of the Service</div></div>
+        </div>
+        <div class="prose">
+          <p>Fee Tracker is a personal financial record-keeping tool that enables Users to log, track, and manage tuition fee payments. The Service is provided strictly as a <strong>record-keeping aid</strong> and does not constitute financial advice, accounting services, taxation advice, or any professional financial service regulated under applicable law.</p>
+          <p>The Service does not process, hold, or transfer any monetary funds. All payment transactions between students and teachers occur entirely outside the Service and are the sole responsibility of the parties involved. Fee Tracker records only the data that Users choose to enter; it does not verify the accuracy, completeness, or legality of any such data.</p>
+          <p>The Service is provided free of charge with no commercial consideration exchanged between the User and the Operator.</p>
+        </div>
+      </div>
+
+      <div id="t4" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 15c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 4</div><div class="card-title">Eligibility &amp; Account Registration</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service is available to Users who are 13 years of age or older. By registering an account, you confirm you meet this minimum age requirement. The Operator reserves the right to terminate any account where this requirement is not met.</p>
+          <p>Account registration is performed exclusively via Google OAuth 2.0 ("Sign in with Google"). You agree to use a Google account that you own and are authorised to use. You are responsible for all activity that occurs under your account.</p>
+          <p>Each User may maintain one account. The creation of multiple accounts for purposes of circumventing rate limits, abuse controls, or any other restriction is strictly prohibited and may result in immediate termination of all associated accounts.</p>
+          <p>You agree to keep your Google account credentials secure and to promptly notify the Operator if you become aware of any unauthorised access to your account.</p>
+        </div>
+      </div>
+
+      <div id="t5" class="card">
+        <div class="card-header">
+          <div class="card-icon red"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L1.5 15h15L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13.5" r=".8" fill="currentColor"/></svg></div>
+          <div><div class="card-num">Section 5</div><div class="card-title">User Obligations &amp; Prohibited Conduct</div></div>
+        </div>
+        <div class="prose">
+          <p>You agree to use the Service only for lawful purposes and in accordance with this Agreement. Without limiting the generality of the foregoing, you expressly agree <strong>not</strong> to:</p>
+          <p><strong>(a)</strong> use the Service to store, process, or transmit any data that is unlawful, defamatory, fraudulent, or in violation of any applicable law or the rights of any third party;</p>
+          <p><strong>(b)</strong> reverse engineer, decompile, disassemble, or attempt to derive the source code of the Service, including its Cloudflare Workers, Firebase Security Rules, or any backend logic;</p>
+          <p><strong>(c)</strong> probe, scan, or test the vulnerability of the Service or any related infrastructure, or attempt to breach or circumvent any security or authentication measures;</p>
+          <p><strong>(d)</strong> submit automated requests to the Service's APIs (including <code>/api/config</code>, <code>/__/auth/</code>, or any Firebase endpoint) in a volume or manner that constitutes abuse, denial-of-service, or violation of the rate limits enforced by the Service;</p>
+          <p><strong>(e)</strong> use the Service to enter the personal data of third parties (including student names or contact details) without having obtained all necessary consents required under applicable data protection law;</p>
+          <p><strong>(f)</strong> impersonate any person or entity, or falsely represent your affiliation with any person or entity;</p>
+          <p><strong>(g)</strong> use the Service for any commercial purpose not expressly authorised by the Operator in writing.</p>
+          <p>Violation of any of the above may result in immediate suspension or termination of your account without notice, and may expose you to civil or criminal liability under applicable law.</p>
+        </div>
+      </div>
+
+      <div id="t6" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 5.5H17l-4.9 3.6 1.8 5.6L9 13.1l-4.9 3.6 1.8-5.6L1 7.5h6.2L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 6</div><div class="card-title">Intellectual Property</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service, including its source code, design, user interface, visual assets, icons, typography, and all original content produced by the Operator, is the exclusive intellectual property of the Operator and is protected by applicable copyright, trade secret, and other intellectual property laws.</p>
+          <p>The Operator grants you a limited, non-exclusive, non-transferable, revocable licence to access and use the Service solely for your personal, non-commercial record-keeping purposes, strictly in accordance with this Agreement. This licence does not include any right to: sublicence the Service; modify, adapt, or create derivative works; reproduce the Service's design or code for any competing product; or remove any proprietary notices.</p>
+          <p>Third-party libraries and frameworks used by the Service (including Firebase, Chart.js, SheetJS, and Google Fonts) are subject to their respective licences. The Operator makes no claim over such third-party intellectual property.</p>
+          <p>The ₹ glyph, "Fee Tracker" wordmark, and associated visual identity are proprietary to the Operator. You may not use them without prior written consent.</p>
+        </div>
+      </div>
+
+      <div id="t7" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14V7l6-4 6 4v7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/></svg></div>
+          <div><div class="card-num">Section 7</div><div class="card-title">User-Generated Content</div></div>
+        </div>
+        <div class="prose">
+          <p>You retain full ownership of all Content you submit to the Service. By submitting Content, you grant the Operator a limited, non-exclusive, royalty-free licence to store, process, and transmit your Content solely as necessary to provide the Service to you. This licence terminates upon deletion of your account.</p>
+          <p>You represent and warrant that: (a) you own or have the right to submit all Content; (b) your Content does not infringe any third-party intellectual property rights; (c) your Content does not contain any personally identifiable information of third parties unless you have obtained all necessary consents; and (d) your Content complies with all applicable laws.</p>
+          <p>The Operator does not actively monitor, review, or edit User Content. However, the Operator reserves the right (but not the obligation) to remove any Content that, in its sole discretion, violates this Agreement or applicable law.</p>
+          <p>You are solely responsible for the accuracy, completeness, and legal compliance of all Content you enter. The Operator is not liable for any errors, inaccuracies, or legal consequences arising from User-entered Content.</p>
+        </div>
+      </div>
+
+      <div id="t8" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 8</div><div class="card-title">Service Availability &amp; Modifications</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service is provided on an "as available" basis. The Operator does not guarantee that the Service will be available at any particular time, uninterrupted, or free from errors. Scheduled and unscheduled maintenance, Firebase outages, Cloudflare incidents, and other factors beyond the Operator's control may render the Service temporarily unavailable.</p>
+          <p>The Operator reserves the right, at any time and without notice, to: modify, suspend, or discontinue the Service (or any part thereof); change features, pricing (if any), or functionality; impose usage limits or restrictions; or terminate the Service entirely. The Operator shall not be liable to you or any third party for any modification, suspension, or discontinuation of the Service.</p>
+          <p>The current version of the Service is <strong>v2.0.x</strong>. Versions within the 2.0.x series represent incremental updates that do not alter the fundamental features of the Service. No upgrade to a v2.1 or higher version is committed to or guaranteed.</p>
+        </div>
+      </div>
+
+      <div id="t9" class="card">
+        <div class="card-header">
+          <div class="card-icon red"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 6.5l5 5M11.5 6.5l-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 9</div><div class="card-title">Disclaimer of Warranties</div></div>
+        </div>
+        <div class="highlight-box orange">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="var(--accent4)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3" stroke="var(--accent4)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".8" fill="var(--accent4)"/></svg>
+          <p>This section contains critical disclaimers. Read carefully before using the Service.</p>
+        </div>
+        <div class="prose">
+          <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SERVICE IS PROVIDED <strong>"AS IS"</strong> AND <strong>"AS AVAILABLE"</strong> WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE.</p>
+          <p>THE OPERATOR EXPRESSLY DISCLAIMS ALL WARRANTIES INCLUDING, WITHOUT LIMITATION:</p>
+          <p><strong>(a) Accuracy:</strong> The Operator does not warrant that any data displayed by or stored in the Service is accurate, complete, current, or reliable. You are solely responsible for verifying the accuracy of all records.</p>
+          <p><strong>(b) Fitness for purpose:</strong> The Service is not warranted to be fit for any particular purpose, including but not limited to academic record-keeping, tax compliance, debt recovery, or any legal proceeding.</p>
+          <p><strong>(c) Data integrity:</strong> The Operator does not warrant that data will not be lost, corrupted, or become inaccessible due to Firebase outages, browser limitations, device failure, or any other cause.</p>
+          <p><strong>(d) Security:</strong> The Operator does not warrant that the Service is free from vulnerabilities, malware, or unauthorised access. No system is absolutely secure.</p>
+          <p><strong>(e) Uninterrupted access:</strong> The Operator does not warrant that access to the Service will be uninterrupted, timely, or error-free.</p>
+          <p>Some jurisdictions do not permit the exclusion of implied warranties; in such jurisdictions, the foregoing disclaimer applies to the fullest extent permitted by law.</p>
+        </div>
+      </div>
+
+      <div id="t10" class="card">
+        <div class="card-header">
+          <div class="card-icon red"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L1.5 15h15L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13.5" r=".8" fill="currentColor"/></svg></div>
+          <div><div class="card-num">Section 10</div><div class="card-title">Limitation of Liability &amp; Indemnification</div></div>
+        </div>
+        <div class="prose">
+          <p><strong>10.1 Limitation of Liability.</strong> To the maximum extent permitted by applicable law, in no event shall the Operator, its successors, assignees, or representatives be liable for any:</p>
+          <p><strong>(a)</strong> direct, indirect, incidental, special, consequential, exemplary, or punitive damages of any kind;</p>
+          <p><strong>(b)</strong> loss of data, profits, revenue, goodwill, opportunity, or anticipated savings;</p>
+          <p><strong>(c)</strong> financial disputes between students and teachers arising from records maintained in the Service;</p>
+          <p><strong>(d)</strong> damages arising from your reliance on any data, calculation, or output produced by the Service;</p>
+          <p><strong>(e)</strong> damages arising from unauthorised access to, or alteration of, your data by third parties;</p>
+          <p><strong>(f)</strong> damages arising from the acts or omissions of Google Firebase, Cloudflare, or any other third-party sub-processor;</p>
+          <p>whether based on warranty, contract, tort (including negligence), product liability, strict liability, or any other legal theory, even if the Operator has been advised of the possibility of such damages.</p>
+          <p><strong>Aggregate cap:</strong> The Operator's total aggregate liability to any User in respect of all claims arising under or in connection with this Agreement shall not exceed <strong>₹0 (zero rupees)</strong>, as the Service is provided entirely free of charge.</p>
+          <p><strong>10.2 Indemnification.</strong> You agree to defend, indemnify, and hold harmless the Operator from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable legal fees) arising from: (a) your use of the Service; (b) any Content you submit; (c) your violation of this Agreement; (d) your violation of any applicable law or the rights of any third party; or (e) any dispute between you and another User or third party.</p>
+        </div>
+      </div>
+
+      <div id="t11" class="card">
+        <div class="card-header">
+          <div class="card-icon pink"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="3" cy="9" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="15" cy="9" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="15" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M9 13v-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 11</div><div class="card-title">Third-Party Services</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service integrates with and relies upon third-party services including Google Firebase (authentication, database, messaging), Google Fonts (typography), Cloudflare (hosting and edge compute), and CDN-hosted JavaScript libraries (Chart.js, SheetJS).</p>
+          <p>Your use of Google Firebase is subject to Google's Terms of Service and Privacy Policy. Your access to the Service through Cloudflare Pages is subject to Cloudflare's Terms of Service. The Operator has no control over and assumes no responsibility for the content, privacy practices, or availability of any third-party service.</p>
+          <p>The Service may contain links to external websites. Such links are provided for convenience only and do not constitute an endorsement by the Operator of any linked site or its content. The Operator is not responsible for the content or privacy practices of any external website.</p>
+          <p>The Operator is not liable for any outage, data breach, service change, or discontinuation by any third-party provider that affects the availability or functionality of the Service.</p>
+        </div>
+      </div>
+
+      <div id="t12" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 6h10M6 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M7 9v5M11 9v5M3 6l1 9a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 12</div><div class="card-title">Termination</div></div>
+        </div>
+        <div class="prose">
+          <p><strong>12.1 Termination by User.</strong> You may terminate this Agreement at any time by ceasing all use of the Service and requesting deletion of your account and associated data in accordance with the Privacy Policy.</p>
+          <p><strong>12.2 Termination by Operator.</strong> The Operator may suspend or terminate your access to the Service, with or without notice, for any reason, including but not limited to: material breach of this Agreement; conduct that the Operator believes is harmful to other Users, third parties, or the Service; prolonged inactivity; or the Operator's decision to discontinue the Service.</p>
+          <p><strong>12.3 Effect of termination.</strong> Upon termination for any reason: (a) all licences granted to you under this Agreement immediately cease; (b) you must cease all use of the Service; (c) provisions of this Agreement that by their nature should survive termination — including Sections 6, 9, 10, and 14 — shall survive. Termination does not automatically delete your Firestore data; a separate deletion request is required as set out in the Privacy Policy.</p>
+        </div>
+      </div>
+
+      <div id="t13" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M14 3H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z" stroke="currentColor" stroke-width="1.5"/><path d="M12 3V1M6 3V1M3 7h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 13</div><div class="card-title">Amendments</div></div>
+        </div>
+        <div class="prose">
+          <p>The Operator reserves the right to amend this Agreement at any time. Amendments will be effective upon publication of the updated Agreement at the URL where these Terms are hosted. The version number and effective date identify the operative version.</p>
+          <p>For material amendments, the Operator will endeavour to notify active Users via an in-app notification where feasible. However, the Operator is under no obligation to provide advance notice of amendments.</p>
+          <p>The current version is frozen at <strong>v2.0.x</strong>. Patch-level updates (v2.0.1, v2.0.2, etc.) may be published to correct typographical errors, clarify existing provisions, or reflect minor operational changes. Such patch updates do not constitute material amendments and do not require re-acceptance.</p>
+          <p>If you do not accept any amendment, you must cease using the Service and request account deletion.</p>
+        </div>
+      </div>
+
+      <div id="t14" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 3.6L15 6.3l-3 2.9.7 4.2L9 11.3l-3.7 2.1.7-4.2L3 6.3l4.2-.7L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 14</div><div class="card-title">Governing Law &amp; Dispute Resolution</div></div>
+        </div>
+        <div class="prose">
+          <p>This Agreement shall be governed by, construed, and enforced in accordance with the laws of the <strong>Republic of India</strong>, including the Information Technology Act, 2000, the Consumer Protection Act, 2019 (to the extent applicable), and any other applicable Indian legislation, without regard to its conflict of law principles.</p>
+          <p><strong>Mandatory pre-dispute negotiation:</strong> Prior to initiating any formal dispute resolution proceeding, the aggrieved party shall provide written notice to the other party describing the nature and basis of the claim and the relief sought. The parties shall negotiate in good faith for a period of 30 (thirty) days from the date of such notice.</p>
+          <p><strong>Arbitration:</strong> If the dispute is not resolved by negotiation within 30 days, it shall be finally and exclusively resolved by binding arbitration pursuant to the Arbitration and Conciliation Act, 1996 (as amended). The arbitration shall be conducted by a sole arbitrator agreed upon by the parties or, failing agreement, appointed pursuant to the Act. The seat of arbitration shall be determined by the Operator. The language of the proceedings shall be English. The award shall be final and binding on both parties.</p>
+          <p><strong>Injunctive relief:</strong> Notwithstanding the arbitration clause, either party may seek emergency injunctive or other equitable relief from a court of competent jurisdiction to prevent irreparable harm pending the outcome of arbitration.</p>
+          <p><strong>Class action waiver:</strong> To the extent permitted by applicable law, you waive any right to participate in a class action, collective proceeding, or representative action against the Operator in connection with this Agreement or the Service.</p>
+        </div>
+      </div>
+
+      <div id="t15" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M6 9h6M9 6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 15</div><div class="card-title">Miscellaneous</div></div>
+        </div>
+        <div class="prose">
+          <p><strong>Entire Agreement:</strong> This Agreement (together with the Privacy Policy) constitutes the entire agreement between you and the Operator with respect to the Service and supersedes all prior or contemporaneous understandings, representations, warranties, and agreements, whether oral or written.</p>
+          <p><strong>Severability:</strong> If any provision of this Agreement is found to be invalid, illegal, or unenforceable by a court of competent jurisdiction, the remaining provisions shall continue in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it enforceable.</p>
+          <p><strong>No waiver:</strong> The Operator's failure to enforce any right or provision of this Agreement shall not constitute a waiver of such right or provision for the future.</p>
+          <p><strong>No partnership:</strong> Nothing in this Agreement creates any partnership, joint venture, agency, franchise, employment, or fiduciary relationship between you and the Operator.</p>
+          <p><strong>Assignment:</strong> You may not assign, transfer, or sublicence any rights or obligations under this Agreement without the prior written consent of the Operator. The Operator may freely assign this Agreement, including in connection with a merger, acquisition, or sale of assets.</p>
+          <p><strong>Force majeure:</strong> The Operator shall not be liable for any failure or delay in performance of its obligations under this Agreement due to events beyond its reasonable control, including but not limited to acts of God, war, terrorism, pandemic, labour disputes, infrastructure failures, governmental actions, or Firebase or Cloudflare outages.</p>
+          <p><strong>Language:</strong> This Agreement is written in English. In the event of any conflict between this English version and any translation, the English version shall prevail.</p>
+        </div>
+      </div>
+
+      <div id="t16" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7l7 4.5L16 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 16</div><div class="card-title">Contact</div></div>
+        </div>
+        <div class="prose">
+          <p>For all queries relating to these Terms and Conditions, contract-related notices, or to report a violation of this Agreement, contact the Operator through the Fee Tracker application's feedback mechanism or via the support channel published on the Service's hosting domain.</p>
+          <p>Legal notices must be sent to the Operator in writing via the support channel. The Operator will acknowledge receipt within <strong>10 (ten) business days</strong>.</p>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <p>These Terms &amp; Conditions were last updated on <strong>1 June 2025</strong>. Version <strong>v2.0.1</strong>.</p>
+        <p style="margin-top:6px;">Fee Tracker · <a href="index.html">Home</a> · <a href="privacy.html">Privacy Policy</a></p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

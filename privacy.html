@@ -82,7 +82,7 @@
     .prose strong{color:var(--text);font-weight:600;}
     .prose em{color:var(--accent);font-style:normal;font-weight:600;}
 
-    .data-table{width:100%;border-collapse:collapse;margin:12px 0;}
+    .data-table{width:100%;border-collapse:collapse;margin:0;min-width:480px;}
     .data-table th{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
     .data-table td{font-size:13px;color:var(--text2);padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5;}
     .data-table td:first-child{color:var(--text);font-weight:500;white-space:nowrap;}
@@ -122,7 +122,7 @@
     <a class="back-btn" href="index.html" aria-label="Back">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
-    <div class="logo-mark"><span>₹</span></div>
+    <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);flex-shrink:0;"><span style="font-size:18px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;line-height:1;">₹</span></div>
     <div class="topbar-info">
       <div class="topbar-label">Fee Tracker</div>
       <div class="topbar-title">Privacy Policy</div>
@@ -142,7 +142,7 @@
       <div class="hero-meta">
         <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M6 4v3M6 8.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Effective 1 June 2025</span>
         <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L7.5 4.5H11L8.5 6.5 9.5 10 6 8 2.5 10l1-3.5L1 4.5h3.5L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Jurisdiction: India</span>
-        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5h4M4 7.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>v2.0</span>
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5h4M4 7.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>v2.0.1</span>
       </div>
     </div>
 
@@ -211,7 +211,7 @@
         <div class="prose">
           <p>The Service collects the following categories of data:</p>
         </div>
-        <table class="data-table">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border-radius:12px;border:1px solid var(--border);"><table class="data-table" style="margin:0;border-radius:0;">
           <thead><tr><th>Data Category</th><th>Specific Items</th><th>Source</th><th>Nature</th></tr></thead>
           <tbody>
             <tr><td>Identity Data</td><td>Display name, email address, profile photo URL, Google UID</td><td>Google OAuth 2.0</td><td class="badge">Personal</td></tr>
@@ -222,7 +222,7 @@
             <tr><td>Push Token</td><td>FCM device token for push notifications (if permission granted)</td><td>Firebase Messaging</td><td class="badge orange">Pseudonymous</td></tr>
             <tr><td>Usage Metadata</td><td>Cache timestamps, sync timestamps, offline queue state</td><td>Service internals</td><td class="badge teal">Technical</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="prose">
           <p>The Service does <strong>not</strong> collect: precise geolocation, biometric data, financial account numbers, government-issued identification, or any special categories of Personal Data as defined under applicable law.</p>
           <p>Student names and fee data entered by a teacher-role User relate to third parties. The teacher-role User is solely responsible for obtaining any necessary consents from those third parties prior to entering their information into the Service.</p>
@@ -266,14 +266,14 @@
         <div class="prose">
           <p>The Service relies on the following third-party sub-processors. Personal Data may be transmitted to and processed by these entities as described:</p>
         </div>
-        <table class="data-table">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border-radius:12px;border:1px solid var(--border);"><table class="data-table" style="margin:0;border-radius:0;">
           <thead><tr><th>Sub-Processor</th><th>Purpose</th><th>Data Shared</th><th>Location</th></tr></thead>
           <tbody>
             <tr><td>Google Firebase<br><small style="color:var(--muted)">google.com</small></td><td>Authentication, Firestore database, Cloud Messaging</td><td>All Personal Data</td><td>Global (Google Cloud)</td></tr>
             <tr><td>Google Fonts<br><small style="color:var(--muted)">fonts.googleapis.com</small></td><td>Web font delivery</td><td>IP address (transient)</td><td>Global CDN</td></tr>
             <tr><td>Cloudflare<br><small style="color:var(--muted)">cdnjs.cloudflare.com</small></td><td>Chart.js &amp; SheetJS CDN</td><td>IP address (transient)</td><td>Global CDN</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="prose">
           <p>Google Firebase processes Personal Data pursuant to Google's Data Processing Addendum and applicable contractual obligations. The Operator has no control over Google's internal data handling practices beyond the contractual terms accepted at the time of Firebase project creation.</p>
           <p>The Operator is <em>not liable</em> for any breach, loss, disclosure, or misuse of Personal Data by any sub-processor, including Google Firebase, where such event occurs within the sub-processor's own infrastructure or is attributable to the sub-processor's acts or omissions.</p>
