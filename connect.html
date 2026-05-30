@@ -344,7 +344,7 @@
   })();
 
   const _cfgData = await _cfgPromise;
-  const cfg = { ..._cfgData.firebase.primary, authDomain: `${_cfgData.firebase.primary.projectId}.firebaseapp.com` };
+  const cfg = { ..._cfgData.firebase.primary, authDomain: 'feetracker2.pages.dev' };
 
   const _app = initializeApp(cfg);
   try {
