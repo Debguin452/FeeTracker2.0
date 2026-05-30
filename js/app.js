@@ -2,10 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
          query, where,
-         initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
-  // getFirestore kept as fallback inside _createFirestore
+         enableIndexedDbPersistence }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getMessaging, getToken, onMessage }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
@@ -45,53 +44,20 @@ let db = null;
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
-// Promise that resolves once _initFirebase() has finished setting up auth
-let _firebaseReadyResolve;
-const _firebaseReady = new Promise(res => { _firebaseReadyResolve = res; });
-
 let _configCache = null;
 
-// Prefetch promise starts the network request immediately at module load,
-// so by the time _initFirebase() awaits it the response is already in-flight or cached.
-let _configPrefetch = null;
-
-function _prefetchConfig() {
-  if (_configPrefetch) return _configPrefetch;
-  _configPrefetch = (async () => {
-    if (_configCache) return _configCache;
-    // localStorage cache — survives across sessions (zero network cost on return visits)
-    try {
-      const cached = localStorage.getItem('ft_cfg_v3');
-      if (cached) {
-        _configCache = JSON.parse(cached);
-        // Revalidate silently in background
-        fetch('/api/config', { credentials: 'same-origin' })
-          .then(r => r.ok ? r.json() : null)
-          .then(d => { if (d) { _configCache = d; try { localStorage.setItem('ft_cfg_v3', JSON.stringify(d)); } catch {} } })
-          .catch(() => {});
-        return _configCache;
-      }
-    } catch {}
-    // Network fetch
-    const res = await fetch('/api/config', { credentials: 'same-origin' });
-    if (!res.ok) {
-      if (res.status === 503 || res.status === 500) throw new Error('Server not configured — set Firebase env vars in Cloudflare Pages');
-      if (res.status === 429) throw new Error('Rate limited — please wait a moment and refresh');
-      throw new Error('Config fetch failed: ' + res.status);
-    }
-    _configCache = await res.json();
-    try { localStorage.setItem('ft_cfg_v3', JSON.stringify(_configCache)); } catch {}
-    return _configCache;
-  })();
-  return _configPrefetch;
-}
-
 async function _fetchConfig() {
-  return _prefetchConfig();
+  if (_configCache) return _configCache;
+  const cached = sessionStorage.getItem('ft_cfg');
+  if (cached) {
+    try { _configCache = JSON.parse(cached); return _configCache; } catch {}
+  }
+  const res = await fetch('/api/config', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
+  _configCache = await res.json();
+  try { sessionStorage.setItem('ft_cfg', JSON.stringify(_configCache)); } catch {}
+  return _configCache;
 }
-
-// Fire immediately — don't wait for DOMContentLoaded
-_prefetchConfig();
 
 function _dbShard(uid) {
   let h = 0;
@@ -103,15 +69,8 @@ function _pickDb(uid) {
   return _dbShard(uid) === 0 ? _db1 : _db2;
 }
 
-function _createFirestore(app) {
-  try {
-    return initializeFirestore(app, {
-      cache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
-  } catch {
-    // fallback if already initialized
-    return getFirestore(app);
-  }
+function _enablePersistence(dbInstance) {
+  enableIndexedDbPersistence(dbInstance).catch(() => {});
 }
 
 async function _initFirebase() {
@@ -119,13 +78,8 @@ async function _initFirebase() {
   const c1  = cfg.firebase.primary;
   const c2  = cfg.firebase.secondary;
 
-  // Always use feetracker2.pages.dev as authDomain so Firebase uses
-  // feetracker2.pages.dev/__/auth/handler instead of the default *.firebaseapp.com
-  // handler. This avoids a cross-origin redirect and is required for redirect sign-in.
-  const c1WithDomain = { ...c1, authDomain: 'feetracker2.pages.dev' };
-
-  _app1 = initializeApp(c1WithDomain, 'primary');
-  _app2 = c2 ? initializeApp({ ...c2, authDomain: 'feetracker2.pages.dev' }, 'secondary') : null;
+  _app1 = initializeApp(c1, 'primary');
+  _app2 = c2 ? initializeApp(c2, 'secondary') : null;
 
   try {
     initializeAppCheck(_app1, {
@@ -134,40 +88,24 @@ async function _initFirebase() {
     });
   } catch {}
 
-  _db1 = _createFirestore(_app1);
-  _db2 = _app2 ? _createFirestore(_app2) : null;
+  _db1 = getFirestore(_app1);
+  _db2 = _app2 ? getFirestore(_app2) : null;
   db   = _db1;
+
+  _enablePersistence(_db1);
+  if (_db2) _enablePersistence(_db2);
 
   auth      = getAuth(_app1);
   VAPID_KEY = cfg.vapidKey;
 
   try { messaging = getMessaging(_app1); } catch {}
 
-  // Run setPersistence and getRedirectResult in parallel — both can start immediately.
-  // Resolving _firebaseReady before they finish lets the sign-in button become active ASAP.
-  const persistencePromise = setPersistence(auth, browserLocalPersistence).catch(() => {});
-  const redirectPromise    = getRedirectResult(auth).catch(e => {
+  await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+  const r = await getRedirectResult(auth).catch(e => {
     if (e.code && e.code !== 'auth/no-current-user') toast('Login error: ' + e.code, 'error');
     return null;
   });
-
-  // Firebase auth is now ready — allow sign-in button to proceed
-  _firebaseReadyResolve();
-
-  // Safety timeout: if splash is still showing after 4 s, show login screen.
-  // 4 s is plenty — if config was cached (localStorage) init takes < 300 ms.
-  setTimeout(() => {
-    if (!loaded && !_offlineBooted) {
-      const splash = document.getElementById('splashSkeleton');
-      if (splash) splash.style.display = 'none';
-      const login = document.getElementById('loginScreen');
-      if (login) login.classList.remove('hidden');
-    }
-  }, 4000);
-
-  // Wait for both
-  await persistencePromise;
-  const r = await redirectPromise;
   if (r?.user) await bootApp(r.user);
 
   onAuthStateChanged(auth, async user => {
@@ -276,14 +214,13 @@ const isT    = () => profile.role === 'teacher';
 // ── INDEXED-DB CACHE — permanent, per-account, survives mobile cache clears ──
 // DB is opened once per session; all reads/writes go through idbReady promise.
 const IDB_NAME  = 'fee-tracker-cache';
-const IDB_VER   = 3;   // matches sw.js IDB_VERSION
+const IDB_VER   = 2;   // bumped to add new stores
 const IDB_STORE = 'kv';
 
 const idbReady = new Promise((resolve, reject) => {
   const req = indexedDB.open(IDB_NAME, IDB_VER);
   req.onupgradeneeded = e => {
-    const db  = e.target.result;
-    const old = e.oldVersion;
+    const db = e.target.result;
     // Main kv store (exists from v1)
     if (!db.objectStoreNames.contains(IDB_STORE)) {
       db.createObjectStore(IDB_STORE);
@@ -291,15 +228,6 @@ const idbReady = new Promise((resolve, reject) => {
     // v2: dedicated batch-detail store keyed by uid__batchId
     if (!db.objectStoreNames.contains('batches_detail')) {
       db.createObjectStore('batches_detail');
-    }
-    // v3: SW queue and meta stores (created here so app and SW share the same DB)
-    if (old < 3) {
-      if (!db.objectStoreNames.contains('sw_queue')) {
-        const qs = db.createObjectStore('sw_queue', { keyPath: 'id', autoIncrement: true });
-        qs.createIndex('by_ts',  'ts');
-        qs.createIndex('by_uid', 'uid');
-      }
-      if (!db.objectStoreNames.contains('sw_meta')) db.createObjectStore('sw_meta');
     }
   };
   req.onsuccess = e => resolve(e.target.result);
@@ -2612,29 +2540,31 @@ function _handleSignedOut() {
     else if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}
 }
 
-// Sign-in — always redirect (no popup). Fast path: if Firebase is already ready
-// (config was cached in localStorage), the redirect fires in < 100 ms.
 document.getElementById('googleSignInBtn').addEventListener('click', async () => {
   const btn = document.getElementById('googleSignInBtn');
-  const GOOGLE_SVG = '<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
   btn.innerHTML='<span class="btn-spinner"><span class="spinner-ring spinner-sm"></span>Signing in…</span>';
   btn.disabled=true;
   document.getElementById('avatarEl')?.classList.add('loading');
   try {
-    // Race _firebaseReady against a 6 s timeout so the user sees an error
-    // instead of a frozen spinner if init is unexpectedly slow.
-    await Promise.race([
-      _firebaseReady,
-      new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('Init timed out'), { code: 'auth/timeout' })), 6000)),
-    ]);
-    if (!auth) throw Object.assign(new Error('Auth not initialized'), { code: 'auth/internal-error' });
-    // signInWithRedirect navigates the page to Google — no further JS executes.
-    await signInWithRedirect(auth, provider);
+    await signInWithPopup(auth, provider);
   } catch(e) {
-    toast('Login failed: '+(e.code||e.message),'error');
-    btn.innerHTML = GOOGLE_SVG;
-    btn.disabled=false;
-    document.getElementById('avatarEl')?.classList.remove('loading');
+    if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
+      // Popup blocked (some mobile browsers) — fall back to redirect
+      try { await signInWithRedirect(auth, provider); }
+      catch(re) {
+        toast('Login failed: '+re.code,'error');
+        btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
+        btn.disabled=false;
+      }
+    } else if (e.code === 'auth/user-cancelled') {
+      btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
+      btn.disabled=false;
+      document.getElementById('avatarEl')?.classList.remove('loading');
+    } else {
+      toast('Login failed: '+e.code,'error');
+      btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
+      btn.disabled=false;
+    }
   }
 });
 
@@ -4687,15 +4617,4 @@ window.exportHistoryCSV = function(){
   }
 };
 
-_initFirebase().catch(e => {
-  console.error('[FeeTracker] init failed:', e);
-  // Resolve so sign-in button doesn't hang waiting
-  _firebaseReadyResolve();
-  // Show visible error so user knows what's wrong
-  const splash = document.getElementById('splashSkeleton');
-  if (splash) splash.style.display = 'none';
-  const login = document.getElementById('loginScreen');
-  if (login) login.classList.remove('hidden');
-  const sub = document.getElementById('loginSub');
-  if (sub) sub.textContent = 'Configuration error — contact support';
-});
+_initFirebase().catch(e => { console.error('[FeeTracker] init failed:', e); });
