@@ -44,6 +44,10 @@ let db = null;
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
+// Promise that resolves once _initFirebase() has finished setting up auth
+let _firebaseReadyResolve;
+const _firebaseReady = new Promise(res => { _firebaseReadyResolve = res; });
+
 let _configCache = null;
 
 async function _fetchConfig() {
@@ -110,6 +114,19 @@ async function _initFirebase() {
   try { messaging = getMessaging(_app1); } catch {}
 
   await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+  // Firebase auth is now ready — allow sign-in button to proceed
+  _firebaseReadyResolve();
+
+  // Safety timeout: if splash is still showing after 12 s, show login screen
+  setTimeout(() => {
+    if (!loaded && !_offlineBooted) {
+      const splash = document.getElementById('splashSkeleton');
+      if (splash) splash.style.display = 'none';
+      const login = document.getElementById('loginScreen');
+      if (login) login.classList.remove('hidden');
+    }
+  }, 12000);
 
   const r = await getRedirectResult(auth).catch(e => {
     if (e.code && e.code !== 'auth/no-current-user') toast('Login error: ' + e.code, 'error');
@@ -2555,6 +2572,9 @@ document.getElementById('googleSignInBtn').addEventListener('click', async () =>
   btn.disabled=true;
   document.getElementById('avatarEl')?.classList.add('loading');
   try {
+    // Wait for Firebase to finish initializing before attempting sign-in
+    await _firebaseReady;
+    if (!auth) throw Object.assign(new Error('Auth not initialized'), { code: 'auth/internal-error' });
     await signInWithPopup(auth, provider);
   } catch(e) {
     if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
@@ -4628,6 +4648,8 @@ window.exportHistoryCSV = function(){
 
 _initFirebase().catch(e => {
   console.error('[FeeTracker] init failed:', e);
+  // Resolve so sign-in button doesn't hang waiting
+  _firebaseReadyResolve();
   // Show visible error so user knows what's wrong
   const splash = document.getElementById('splashSkeleton');
   if (splash) splash.style.display = 'none';
