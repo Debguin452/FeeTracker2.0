@@ -1,45 +1,48 @@
-const FIREBASE_PROJECT_ID = "fee-tracker-f32f8";
-const FIREBASE_AUTH_DOMAIN = `${FIREBASE_PROJECT_ID}.firebaseapp.com`;
-
 export async function onRequest(context) {
-  const { request, params } = context;
+  const { request, params, env } = context;
 
+  const projectId = env.FB1_PROJECT_ID;
+  if (!projectId) {
+    return new Response('Auth proxy misconfigured: FB1_PROJECT_ID secret not set.', { status: 500 });
+  }
+
+  const firebaseAuthDomain = `${projectId}.firebaseapp.com`;
   const url = new URL(request.url);
   const pathSegments = params.path;
-  const upstreamPath  = `/__/auth/${Array.isArray(pathSegments) ? pathSegments.join("/") : pathSegments}`;
-  const upstreamUrl   = `https://${FIREBASE_AUTH_DOMAIN}${upstreamPath}${url.search}`;
+  const upstreamPath = `/__/auth/${Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments}`;
+  const upstreamUrl  = `https://${firebaseAuthDomain}${upstreamPath}${url.search}`;
 
   const proxyHeaders = new Headers(request.headers);
-  proxyHeaders.set("Host", FIREBASE_AUTH_DOMAIN);
-  proxyHeaders.delete("CF-Connecting-IP");
-
-  const upstreamRequest = new Request(upstreamUrl, {
-    method:  request.method,
-    headers: proxyHeaders,
-    body:    request.method !== "GET" && request.method !== "HEAD"
-               ? request.body
-               : undefined,
-    redirect: "follow",
-  });
+  proxyHeaders.set('Host', firebaseAuthDomain);
+  proxyHeaders.delete('CF-Connecting-IP');
+  proxyHeaders.delete('CF-Ray');
+  proxyHeaders.delete('CF-Visitor');
+  proxyHeaders.delete('CF-IPCountry');
 
   let upstreamResponse;
   try {
-    upstreamResponse = await fetch(upstreamRequest);
+    upstreamResponse = await fetch(new Request(upstreamUrl, {
+      method:   request.method,
+      headers:  proxyHeaders,
+      body:     request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+      redirect: 'follow',
+    }));
   } catch (err) {
-    return new Response(`Proxy error: ${err.message}`, { status: 502 });
+    return new Response(`Auth proxy error: ${err.message}`, { status: 502 });
   }
 
   const responseHeaders = new Headers(upstreamResponse.headers);
-  responseHeaders.delete("Content-Security-Policy");
-  responseHeaders.delete("X-Frame-Options");
+  responseHeaders.delete('Content-Security-Policy');
+  responseHeaders.delete('X-Frame-Options');
+  responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
-  const contentType = responseHeaders.get("Content-Type") || "";
-  if (contentType.includes("text/html") || contentType.includes("javascript")) {
+  const contentType = responseHeaders.get('Content-Type') || '';
+  if (contentType.includes('text/html') || contentType.includes('javascript')) {
     const body = await upstreamResponse.text();
-    const rewrittenBody = body
-      .replaceAll(`https://${FIREBASE_AUTH_DOMAIN}`, url.origin)
-      .replaceAll(`//${FIREBASE_AUTH_DOMAIN}`,       `//${url.hostname}`);
-    return new Response(rewrittenBody, {
+    const rewritten = body
+      .replaceAll(`https://${firebaseAuthDomain}`, url.origin)
+      .replaceAll(`//${firebaseAuthDomain}`, `//${url.hostname}`);
+    return new Response(rewritten, {
       status:  upstreamResponse.status,
       headers: responseHeaders,
     });
