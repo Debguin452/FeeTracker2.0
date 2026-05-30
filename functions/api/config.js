@@ -7,6 +7,7 @@ export async function onRequest(context) {
   const allowedOrigins = [
     'https://feetracker2.pages.dev',
     'https://feetracker.pages.dev',
+    'https://fee.tracker1.workers.dev',
   ];
   const originAllowed = allowedOrigins.includes(origin) || origin === '';
 
@@ -37,9 +38,15 @@ export async function onRequest(context) {
 
   const missing = required.filter(k => !env[k]);
   if (missing.length > 0) {
-    return new Response(JSON.stringify({ error: 'Server misconfiguration', missing }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    console.error('[config] Missing env vars:', missing.join(', '));
+    return new Response(JSON.stringify({ error: 'Server misconfiguration', code: 'ENV_MISSING' }), {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': originAllowed ? (origin || '*') : 'null',
+        'Retry-After': '60',
+      },
     });
   }
 
