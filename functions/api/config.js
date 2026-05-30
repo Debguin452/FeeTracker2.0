@@ -32,20 +32,15 @@ export async function onRequest(context) {
 
   const required = [
     'FB1_API_KEY', 'FB1_PROJECT_ID', 'FB1_MESSAGING_SENDER_ID', 'FB1_APP_ID',
+    'FB2_API_KEY', 'FB2_PROJECT_ID', 'FB2_MESSAGING_SENDER_ID', 'FB2_APP_ID',
     'RECAPTCHA_SITE_KEY', 'FCM_VAPID_KEY',
   ];
 
   const missing = required.filter(k => !env[k]);
   if (missing.length > 0) {
-    console.error('[config] Missing env vars:', missing.join(', '));
-    return new Response(JSON.stringify({ error: 'Server misconfiguration', code: 'ENV_MISSING' }), {
-      status: 503,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': originAllowed ? (origin || '*') : 'null',
-        'Retry-After': '60',
-      },
+    return new Response(JSON.stringify({ error: 'Server misconfiguration', missing }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   }
 
