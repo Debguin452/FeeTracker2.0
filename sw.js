@@ -1,21 +1,21 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v12';
+const CACHE_VERSION = 'ft-v10';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
 const SHELL_ASSETS = [
-  '/',
-  '/index.html',
-  '/connect.html',
-  '/css/app.css',
-  '/js/app.js',
-  '/js/pwa.js',
-  '/js/theme.js',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  './index.html',
+  './connect.html',
+  './css/app.css',
+  './js/app.js',
+  './js/pwa.js',
+  './js/theme.js',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 const CDN_PATTERNS = [
@@ -264,8 +264,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Let browser handle all Firebase/Google API requests natively — no SW interference
   if (BYPASS_PATTERNS.some(p => request.url.includes(p))) {
+    event.respondWith(fetch(request));
     return;
   }
 
@@ -276,8 +276,6 @@ self.addEventListener('fetch', event => {
 
   if (isShell) { event.respondWith(swrShell(request)); return; }
   if (CDN_PATTERNS.some(p => request.url.includes(p))) { event.respondWith(cacheFirst(request, STATIC_CACHE)); return; }
-  // Extra safety: bypass any googleapis.com or gstatic.com not caught above
-  if (url.hostname.endsWith('.googleapis.com') || url.hostname.endsWith('.gstatic.com')) { return; }
 
   if (url.origin === self.location.origin) {
     const ext = url.pathname.split('.').pop().toLowerCase();
@@ -300,11 +298,11 @@ async function swrShell(request) {
     clearTimeout(tid);
     if (networkRes.ok) {
       cache.put(request, networkRes.clone());
-      cache.put('/index.html', networkRes.clone());
+      cache.put('./index.html', networkRes.clone());
       return networkRes;
     }
   } catch { clearTimeout(tid); }
-  const cached = await cache.match(request) || await cache.match('/index.html') || await cache.match('/');
+  const cached = await cache.match(request) || await cache.match('./index.html') || await cache.match('./');
   if (cached) return cached;
   return new Response(
     '<html><body style="font-family:sans-serif;text-align:center;padding:40px"><h2>Fee Tracker</h2><p>You are offline and the app has not been cached yet. Connect to the internet and reload.</p></body></html>',
@@ -373,8 +371,8 @@ async function handlePeriodicReminder() {
   }, 0);
   await self.registration.showNotification('Fee Tracker — Dues Pending', {
     body:     `${due.length} teacher${due.length > 1 ? 's' : ''} overdue · ₹${total.toLocaleString('en-IN')} total`,
-    icon:     '/icons/icon-192.png',
-    badge:    '/icons/icon-192.png',
+    icon:     './icons/icon-192.png',
+    badge:    './icons/icon-192.png',
     tag:      'ft-reminder',
     renotify: false,
     data:     { url: './' },
@@ -390,8 +388,8 @@ self.addEventListener('push', event => {
   const title   = payload.notification?.title || payload.title || 'Fee Tracker';
   const options = {
     body:     payload.notification?.body || payload.body || '',
-    icon:     '/icons/icon-192.png',
-    badge:    '/icons/icon-192.png',
+    icon:     './icons/icon-192.png',
+    badge:    './icons/icon-192.png',
     tag:      payload.tag || 'ft-push',
     renotify: !!payload.renotify,
     vibrate:  [150, 80, 150],
