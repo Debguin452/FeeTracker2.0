@@ -74,8 +74,10 @@ function _enablePersistence(dbInstance) {
 
 async function _initFirebase() {
   const cfg = await _fetchConfig();
-  const c1  = cfg.firebase.primary;
-  const c2  = cfg.firebase.secondary;
+  const c1  = { ...cfg.firebase.primary,   authDomain: 'feetracker2.pages.dev' };
+  const c2  = cfg.firebase.secondary
+    ? { ...cfg.firebase.secondary, authDomain: 'feetracker2.pages.dev' }
+    : null;
 
   _app1 = initializeApp(c1, 'primary');
   _app2 = c2 ? initializeApp(c2, 'secondary') : null;
