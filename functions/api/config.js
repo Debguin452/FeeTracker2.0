@@ -53,8 +53,7 @@ export async function onRequest(context) {
     firebase: {
       primary: {
         apiKey:            env.FB1_API_KEY,
-        // Use native Firebase authDomain — no custom proxy needed, works reliably
-        authDomain:        `${env.FB1_PROJECT_ID}.firebaseapp.com`,
+        authDomain:        'feetracker2.pages.dev',
         projectId:         env.FB1_PROJECT_ID,
         storageBucket:     `${env.FB1_PROJECT_ID}.firebasestorage.app`,
         messagingSenderId: env.FB1_MESSAGING_SENDER_ID,
@@ -62,7 +61,7 @@ export async function onRequest(context) {
       },
       secondary: env.FB2_API_KEY ? {
         apiKey:            env.FB2_API_KEY,
-        authDomain:        `${env.FB2_PROJECT_ID}.firebaseapp.com`,
+        authDomain:        'feetracker2.pages.dev',
         projectId:         env.FB2_PROJECT_ID,
         storageBucket:     `${env.FB2_PROJECT_ID}.firebasestorage.app`,
         messagingSenderId: env.FB2_MESSAGING_SENDER_ID,
