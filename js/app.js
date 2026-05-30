@@ -2581,6 +2581,12 @@ function _handleSignedOut() {
     else if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}
 }
 
+// Detect mobile browsers where popup is unreliable — use redirect instead
+function _isMobileBrowser() {
+  const ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+}
+
 document.getElementById('googleSignInBtn').addEventListener('click', async () => {
   const btn = document.getElementById('googleSignInBtn');
   btn.innerHTML='<span class="btn-spinner"><span class="spinner-ring spinner-sm"></span>Signing in…</span>';
@@ -2590,6 +2596,11 @@ document.getElementById('googleSignInBtn').addEventListener('click', async () =>
     // Wait for Firebase to finish initializing before attempting sign-in
     await _firebaseReady;
     if (!auth) throw Object.assign(new Error('Auth not initialized'), { code: 'auth/internal-error' });
+    // Mobile browsers (Chrome Android, Kiwi, etc.) block popups — always use redirect
+    if (_isMobileBrowser()) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
     await signInWithPopup(auth, provider);
   } catch(e) {
     if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
