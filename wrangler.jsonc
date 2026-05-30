@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fee",
+  "name": "feetracker",
   "compatibility_date": "2025-09-27",
   "observability": {
     "enabled": true
@@ -10,5 +10,12 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "8e88c9f409ad4b07928d8e4e1a89ede2",
+      "preview_id": "8e88c9f409ad4b07928d8e4e1a89ede2"
+    }
   ]
 }
