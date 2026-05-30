@@ -187,21 +187,21 @@
 
     
     #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
-    .load-logo{width:54px;height:54px;border-radius:17px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);}
+    .load-logo{width:54px;height:54px;border-radius:17px;overflow:hidden;box-shadow:0 8px 32px rgba(124,107,255,.2);}
     .load-txt{font-size:13px;color:var(--muted);}
   </style>
 </head>
 <body>
 
 <div id="loadingScreen">
-  <div class="load-logo"><span style="font-size:26px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;line-height:1;">₹</span></div>
+  <div class="load-logo"><img src="/icons/icon-192.png" alt="Fee Tracker" style="width:54px;height:54px;border-radius:17px;display:block;object-fit:cover;"></div>
   <div class="spinner" style="margin:0;width:24px;height:24px;border-width:2.5px;"></div>
   <div class="load-txt">Loading…</div>
 </div>
 
 <!-- LOGIN GATE -->
 <div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;">
-  <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);margin-bottom:8px;"><span style="font-size:34px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;line-height:1;">₹</span></div>
+  <div style="width:64px;height:64px;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(124,107,255,.2);margin-bottom:8px;"><img src="/icons/icon-512.png" alt="Fee Tracker" style="width:64px;height:64px;display:block;object-fit:cover;"></div>
   <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);text-align:center;">Sign in to Connect</div>
   <div style="font-size:14px;color:var(--muted);text-align:center;line-height:1.6;">You need to be signed in to Fee Tracker to use Connect.</div>
   <button onclick="window.location.href='index.html'" style="background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;">Go to Fee Tracker</button>
@@ -335,12 +335,23 @@
     updateDoc, deleteDoc, query, where, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+  // Use localStorage so cached config survives tab reopens (zero network cost on return visits)
   const _cfgPromise = (() => {
-    const s = sessionStorage.getItem('ft_cfg');
-    if (s) try { return Promise.resolve(JSON.parse(s)); } catch {}
+    try {
+      const s = localStorage.getItem('ft_cfg_v3');
+      if (s) {
+        const parsed = JSON.parse(s);
+        // Revalidate silently in background
+        fetch('/api/config', { credentials: 'same-origin' })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d) { try { localStorage.setItem('ft_cfg_v3', JSON.stringify(d)); } catch {} } })
+          .catch(() => {});
+        return Promise.resolve(parsed);
+      }
+    } catch {}
     return fetch('/api/config', { credentials: 'same-origin' })
       .then(r => r.json())
-      .then(d => { try { sessionStorage.setItem('ft_cfg', JSON.stringify(d)); } catch {} return d; });
+      .then(d => { try { localStorage.setItem('ft_cfg_v3', JSON.stringify(d)); } catch {} return d; });
   })();
 
   const _cfgData = await _cfgPromise;
