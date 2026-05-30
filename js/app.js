@@ -47,8 +47,32 @@ function _prefetchConfig() {
     try { _configCache = JSON.parse(cached); return Promise.resolve(_configCache); } catch {}
   }
   _configPromise = fetch('/api/config', { credentials: 'same-origin' })
-    .then(r => { if (!r.ok) throw new Error('Config ' + r.status); return r.json(); })
-    .then(d => { _configCache = d; try { sessionStorage.setItem('ft_cfg', JSON.stringify(d)); } catch {} return d; });
+    .then(async r => {
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        const code = body.code || '';
+        if (r.status === 503 && code === 'ENV_MISSING') {
+          throw new Error('APP_NOT_CONFIGURED');
+        }
+        if (r.status === 429) {
+          throw new Error('RATE_LIMITED');
+        }
+        throw new Error('Config ' + r.status);
+      }
+      return r.json();
+    })
+    .then(d => { _configCache = d; try { sessionStorage.setItem('ft_cfg', JSON.stringify(d)); } catch {} return d; })
+    .catch(e => {
+      _configPromise = null; // allow retry on next call
+      if (e.message === 'APP_NOT_CONFIGURED') {
+        toast('App is not configured yet. Contact support.', 'error');
+      } else if (e.message === 'RATE_LIMITED') {
+        toast('Too many requests. Please wait a moment.', 'error');
+      } else {
+        toast('Failed to load app config. Check your connection.', 'error');
+      }
+      throw e;
+    });
   return _configPromise;
 }
 
@@ -74,8 +98,10 @@ function _enablePersistence(dbInstance) {
 
 async function _initFirebase() {
   const cfg = await _fetchConfig();
-  const c1  = cfg.firebase.primary;
-  const c2  = cfg.firebase.secondary;
+  const c1  = { ...cfg.firebase.primary,   authDomain: 'feetracker2.pages.dev' };
+  const c2  = cfg.firebase.secondary
+    ? { ...cfg.firebase.secondary, authDomain: 'feetracker2.pages.dev' }
+    : null;
 
   _app1 = initializeApp(c1, 'primary');
   _app2 = c2 ? initializeApp(c2, 'secondary') : null;
