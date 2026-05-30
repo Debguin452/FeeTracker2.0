@@ -1,0 +1,32 @@
+{
+  "name": "Fee Tracker",
+  "short_name": "Fee Tracker",
+  "description": "Smart fee tracking for students and teachers",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#06060f",
+  "theme_color": "#080812",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Payment",
+      "short_name": "Pay",
+      "description": "Record a payment quickly",
+      "url": "./?action=add",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View Analytics",
+      "short_name": "Stats",
+      "description": "Open your analytics dashboard",
+      "url": "./?action=dash",
+      "icons": [{ "src": "icons/icon-512.png", "sizes": "512x512" }]
+    }
+  ],
+  "categories": ["finance", "productivity", "education"],
+  "prefer_related_applications": false
+}

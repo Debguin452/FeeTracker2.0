@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Fee Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080812" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2fa" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fee Tracker">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="description" content="Fee Tracker — Smart, simple fee management for students and teachers. Track tuition payments, manage batches, and never miss a due date.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fee.tracker1.workers.dev/">
+  <meta property="og:title" content="Fee Tracker — Smart · Simple · Personal">
+  <meta property="og:description" content="Track tuition fees and payments effortlessly. Students see what they owe. Teachers manage batches and collect dues — all in one place.">
+  <meta property="og:image" content="https://fee.tracker1.workers.dev/icons/preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Fee Tracker">
+  <meta property="og:locale" content="en_IN">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fee Tracker — Smart · Simple · Personal">
+  <meta name="twitter:description" content="Track tuition fees effortlessly. Works offline, PWA ready.">
+  <meta name="twitter:image" content="https://fee.tracker1.workers.dev/icons/preview.png">
+  <link rel="canonical" href="https://fee.tracker1.workers.dev/">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="js/theme.js"></script>
+</head>
+<body>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+
+  <!-- ── DESKTOP SIDEBAR (960px+ only, hidden on mobile/login) ── -->
+  <nav id="desktopSidebar" style="display:none;">
+    <div class="sb-logo">
+      <img src="icons/icon-512.png" alt="Fee Tracker" style="width:36px;height:36px;border-radius:12px;flex-shrink:0;object-fit:cover;box-shadow:0 4px 14px rgba(124,107,255,.35);">
+      <div>
+        <div class="sb-logo-name">Fee Tracker</div>
+        <div class="sb-logo-sub">Smart · Simple · Personal</div>
+      </div>
+    </div>
+
+    <div class="sb-section-label">Navigation</div>
+
+    <button class="sb-item active" id="sbHome" onclick="sbGoHome()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8l6-4.5L14 8v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 15v-5h4v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Home
+    </button>
+
+    <button class="sb-item" id="sbAnalytics" onclick="sbGoAnalytics()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="2" y1="14" x2="2" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="4,11 6.5,7 9,9 12,5 14,6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      Analytics
+    </button>
+
+    <button class="sb-item" id="sbHistory" onclick="sbGoHistory()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      History
+    </button>
+
+    <div class="sb-spacer"></div>
+
+    <div class="sb-section-label">Account</div>
+
+    <button class="sb-item" id="sbProfile" onclick="sbOpenProfile()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Profile
+    </button>
+
+    <!-- Desktop profile info card at bottom -->
+    <div class="sb-user" id="sbUserCard">
+      <div class="sb-user-av" id="sbUserAv">?</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sbUserName">Loading…</div>
+        <div class="sb-user-email" id="sbUserEmail" style="font-size:9px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+      <!-- Three-dot menu -->
+      <div style="position:relative;">
+        <button id="sbUserMenuBtn" onclick="event.stopPropagation();sbToggleUserMenu()" style="width:28px;height:28px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
+        </button>
+        <div id="sbUserMenu" style="display:none;position:absolute;bottom:36px;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:14px;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:6px;z-index:200;">
+          <div onclick="closeMenu?.();openProfileModal?.();sbCloseSideUserMenu()" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;transition:background .12s;" onmouseenter="this.style.background='var(--surface3)'" onmouseleave="this.style.background=''">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9H2v-3L11 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Edit Profile
+          </div>
+          <div onclick="sbCloseSideUserMenu();window.doSignOut?.()" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--red);font-weight:500;transition:background .12s;margin-top:2px;" onmouseenter="this.style.background='rgba(255,77,109,.07)'" onmouseleave="this.style.background=''">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10 7H2M8 4.5L10.5 7 8 9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 3H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Sign Out
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ONBOARDING — 3-step wizard, first login only -->
+  <div id="onboardScreen" class="hidden">
+    <div class="ob-inner">
+
+      <!-- Step 1: Role selection -->
+      <div id="obStep1">
+        <div class="ob-greeting">Hi there!</div>
+        <div class="ob-sub">Tell us who you are to personalise Fee Tracker for you.</div>
+        <div class="ob-section-label">I am a&hellip;</div>
+        <div class="ob-role-grid">
+          <div class="ob-role-card" id="obRoleS" onclick="obSelectRole('student')">
+            <div class="ob-check" id="obCheckS"></div>
+            <div class="ob-role-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto"><path d="M24 10L6 20l18 10 18-10L24 10z" fill="currentColor" opacity=".22" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 24v10c0 4.4 5.4 8 12 8s12-3.6 12-8V24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="42" y1="20" x2="42" y2="32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="42" cy="33" r="2" fill="currentColor"/></svg></div>
+            <div class="ob-role-label">Student</div>
+            <div class="ob-role-desc">Track tuition fees &amp; payments to teachers</div>
+          </div>
+          <div class="ob-role-card" id="obRoleT" onclick="obSelectRole('teacher')">
+            <div class="ob-check" id="obCheckT"></div>
+            <div class="ob-role-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto"><rect x="4" y="8" width="34" height="22" rx="3" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="2"/><path d="M10 14h22M10 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M38 16v14M36 30l2 3 2-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="38" r="4" stroke="currentColor" stroke-width="2"/><path d="M8 48c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M28 44h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".5"/><path d="M28 40h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".35"/></svg></div>
+            <div class="ob-role-label">Teacher</div>
+            <div class="ob-role-desc">Manage batches, students &amp; collect fees</div>
+          </div>
+        </div>
+        <!-- Next only shows after role selected -->
+        <button class="ob-continue-btn" id="obNextBtn1" onclick="obNext(1)" style="display:none;">Next &rarr;</button>
+      </div>
+
+      <!-- Step 2: Name -->
+      <div id="obStep2" class="hidden">
+        <div class="ob-section-label" style="margin-top:0;">Your Name</div>
+        <input class="ob-name-input" id="obName" type="text"
+          placeholder="What should we call you?" maxlength="40" autocomplete="name">
+        <button class="ob-continue-btn" id="obNextBtn2" onclick="obNext(2)" style="display:none;">Next &rarr;</button>
+      </div>
+
+      <!-- Step 3A: Student — class -->
+      <div id="obStudentFields" class="hidden">
+        <div class="ob-section-label">Your Class / Grade</div>
+        <div class="ob-chips-grid">
+          <div class="ob-chip" data-val="Class 9"    onclick="obChip(this)">Cls 9</div>
+          <div class="ob-chip" data-val="Class 10"   onclick="obChip(this)">Cls 10</div>
+          <div class="ob-chip" data-val="Class 11"   onclick="obChip(this)">Cls 11</div>
+          <div class="ob-chip" data-val="Class 12"   onclick="obChip(this)">Cls 12</div>
+          <div class="ob-chip" data-val="1st Year"   onclick="obChip(this)">1st Yr</div>
+          <div class="ob-chip" data-val="2nd Year"   onclick="obChip(this)">2nd Yr</div>
+          <div class="ob-chip" data-val="3rd Year"   onclick="obChip(this)">3rd Yr</div>
+          <div class="ob-chip" data-val="Graduation" onclick="obChip(this)">Grad</div>
+        </div>
+        <input class="ob-free-input" id="obClass" type="text"
+          placeholder="Or type your class / grade&hellip;" maxlength="30" style="margin-top:8px;">
+        <button class="ob-continue-btn" id="obDoneBtn" onclick="obSubmit()" style="display:none;">Get Started →</button>
+      </div>
+
+      <!-- Step 3B: Teacher — subjects + classes + session -->
+      <div id="obTeacherFields" class="hidden">
+        <div class="ob-section-label">Subjects You Teach</div>
+        <div class="ob-subj-tags" id="obSubjTags"></div>
+        <div class="ob-add-row">
+          <input class="ob-add-inp" id="obSubjInp" type="text" placeholder="e.g. Physics, Math&hellip;" maxlength="30">
+          <button class="ob-add-btn" onclick="obAddSubj()">+ Add</button>
+        </div>
+        <div class="ob-section-label" style="margin-top:18px;">Classes You Teach</div>
+        <div class="ob-subj-tags" id="obClassTags"></div>
+        <div class="ob-chips-grid" style="margin-bottom:8px;">
+          <div class="ob-chip" data-val="Class 9"    onclick="obToggleClassChip(this)">Cls 9</div>
+          <div class="ob-chip" data-val="Class 10"   onclick="obToggleClassChip(this)">Cls 10</div>
+          <div class="ob-chip" data-val="Class 11"   onclick="obToggleClassChip(this)">Cls 11</div>
+          <div class="ob-chip" data-val="Class 12"   onclick="obToggleClassChip(this)">Cls 12</div>
+          <div class="ob-chip" data-val="1st Year"   onclick="obToggleClassChip(this)">1st Yr</div>
+          <div class="ob-chip" data-val="2nd Year"   onclick="obToggleClassChip(this)">2nd Yr</div>
+          <div class="ob-chip" data-val="3rd Year"   onclick="obToggleClassChip(this)">3rd Yr</div>
+          <div class="ob-chip" data-val="Graduation" onclick="obToggleClassChip(this)">Grad</div>
+        </div>
+        <div class="ob-add-row">
+          <input class="ob-add-inp" id="obClassInp" type="text" placeholder="Or type a custom class…" maxlength="30">
+          <button class="ob-add-btn" onclick="obAddClass()">+ Add</button>
+        </div>
+        <div class="ob-section-label" style="margin-top:18px;">Academic Session</div>
+        <input class="ob-free-input" id="obSession" type="text" placeholder="e.g. 2025&ndash;26" maxlength="20">
+        <button class="ob-continue-btn ob-t-btn" id="obDoneTeacherBtn" onclick="obSubmit()" style="display:none;">Get Started →</button>
+      </div>
+
+    </div>
+  </div>
+
+    <!-- LOGIN -->
+  <!-- LOGIN -->
+  <!-- SPLASH SKELETON — shown immediately while Firebase auth resolves -->
+  <div id="authOverlay">
+    <div class="auth-logo"><div style="width:52px;height:52px;border-radius:17px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 6px 24px rgba(124,107,255,.2);"><span style="font-size:28px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;">₹</span></div></div>
+    <div class="auth-ring"></div>
+    <div class="auth-ring-label">Fee Tracker</div>
+  </div>
+
+  <div id="splashSkeleton">
+    <div class="splash-topbar">
+      <div class="sk sk-circle" id="splashAvatar" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff;"></div>
+      <div style="flex:1;padding:0 12px;">
+        <div class="topbar-title" id="splashTitle" style="opacity:.85;">Fee Tracker</div>
+      </div>
+      <!-- Right buttons: analytics + add (mirrors real topbar-right) -->
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <div class="sk" style="width:40px;height:40px;border-radius:14px;"></div>
+        <div class="sk" style="width:40px;height:40px;border-radius:16px;"></div>
+      </div>
+    </div>
+    <div class="splash-body">
+      <!-- Hero / total card block -->
+      <div class="sk-hero"><div class="sk-hero-inner"><div>
+        <div class="sk-hero-label"></div><div class="sk-hero-amount"></div><div class="sk-hero-sub"></div>
+      </div><div class="sk-hero-pills">
+        <div class="sk-hero-pill"></div><div class="sk-hero-pill"></div><div class="sk-hero-pill"></div>
+      </div></div></div>
+      <!-- Search bar block -->
+      <div class="sk" style="width:100%;height:48px;border-radius:16px;margin-bottom:18px;"></div>
+      <!-- Section label row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="sk" style="width:68px;height:8px;border-radius:5px;opacity:.45;"></div>
+        <div class="sk" style="width:22px;height:14px;border-radius:7px;opacity:.3;"></div>
+      </div>
+      <!-- Card 1 — full opacity -->
+      <div class="sk-tc" style="padding:14px 16px;margin-bottom:10px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div class="sk" style="width:140px;height:15px;border-radius:6px;margin-bottom:8px;"></div>
+            <div class="sk" style="width:100px;height:10px;border-radius:5px;margin-bottom:6px;opacity:.65;"></div>
+            <div class="sk" style="width:80px;height:9px;border-radius:4px;opacity:.4;"></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="sk" style="width:70px;height:22px;border-radius:7px;margin-bottom:6px;"></div>
+            <div class="sk" style="width:48px;height:9px;border-radius:4px;opacity:.45;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Card 2 — dimmed -->
+      <div class="sk-tc" style="padding:14px 16px;margin-bottom:10px;opacity:.55;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div class="sk" style="width:120px;height:15px;border-radius:6px;margin-bottom:8px;"></div>
+            <div class="sk" style="width:88px;height:10px;border-radius:5px;opacity:.65;"></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="sk" style="width:58px;height:22px;border-radius:7px;margin-bottom:6px;"></div>
+            <div class="sk" style="width:40px;height:9px;border-radius:4px;opacity:.45;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Card 3 — very dim -->
+      <div class="sk-tc" style="padding:14px 16px;opacity:.22;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div class="sk" style="width:100px;height:15px;border-radius:6px;margin-bottom:8px;"></div>
+            <div class="sk" style="width:72px;height:10px;border-radius:5px;opacity:.65;"></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="sk" style="width:52px;height:22px;border-radius:7px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen hidden" id="loginScreen">
+    <!-- LOGIN SKELETON — shown while firebase initialises -->
+    <div id="loginSkeleton">
+      <div class="sk-login-glyph"></div>
+      <div class="sk" style="width:160px;height:28px;border-radius:8px;margin-top:14px;"></div>
+      <div class="sk" style="width:120px;height:8px;border-radius:4px;opacity:.25;margin-top:10px;"></div>
+      <div style="height:56px;"></div>
+      <div class="sk-login-btn"></div>
+      <div class="sk" style="width:190px;height:7px;border-radius:4px;opacity:.2;margin-top:20px;"></div>
+      <div class="sk" style="width:140px;height:7px;border-radius:4px;opacity:.14;margin-top:5px;"></div>
+    </div>
+
+    <!-- REAL CONTENT — fades in after skeleton -->
+    <div id="loginContent" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 28px;width:100%;max-width:420px;opacity:0;transition:opacity .5s ease;pointer-events:none;position:relative;z-index:1;">
+      <div class="login-glyph"><div style="width:80px;height:80px;border-radius:26px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);"><span style="font-size:46px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;display:block;">₹</span></div></div>
+      <div class="login-name">Fee Tracker</div>
+      <div class="login-sub">Smart &middot; Simple &middot; Personal</div>
+      <div id="loginOfflineNotice" style="display:none;align-items:center;gap:6px;background:rgba(255,154,60,.12);border:1px solid rgba(255,154,60,.3);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:12px;color:var(--accent4);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L1 12h12L7 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="11" r=".7" fill="currentColor"/></svg>Offline — sign in needs connection</div>
+      <button class="google-btn" id="googleSignInBtn">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+      <p class="login-note"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="display:inline-block;vertical-align:middle;margin-right:4px;opacity:.7"><rect x="2" y="5.5" width="8" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Your data is private. Works for students tracking fees and teachers managing batches.</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+
+
+  <div class="screen hidden" id="appScreen">
+    <div id="pull-indicator">↓ Pull to refresh</div>
+    <div class="topbar">
+      <button class="avatar-btn" id="avatarEl" title="Profile">?</button>
+      <div class="topbar-left">
+        <div class="topbar-label" id="topbarLabel">Personal Tracker</div>
+        <div class="topbar-title">Fee Tracker</div>
+      </div>
+      <div class="topbar-right">
+        <button class="search-topbar-btn" id="searchTopbarBtn" title="Search" style="width:40px;height:40px;border-radius:var(--r-lg);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:block"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.7"/><line x1="10.5" y1="10.5" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+        <button class="dash-btn hidden" id="dashBtn" title="Analytics"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block"><line x1="3" y1="19" x2="3" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="19" x2="20" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="5,15 8,9 12,12 16,6 19,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="19" cy="8" r="2" fill="currentColor" opacity=".8"/></svg></button>
+        <button class="add-btn" id="addBtn" title="Add"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><line x1="11" y1="4" x2="11" y2="18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="4" y1="11" x2="18" y2="11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      </div>
+    </div>
+    <div class="app-inner" id="appInner">
+      <!-- Skeleton: hero card -->
+      <div class="sk sk-total-card"></div>
+      <!-- Skeleton: search bar -->
+      <div class="sk sk-mb16" style="height:48px;border-radius:16px;opacity:.8;"></div>
+      <!-- Skeleton: section label -->
+      <div class="sk-section-row sk-mb12">
+        <div class="sk" style="width:64px;height:8px;border-radius:4px;opacity:.4;"></div>
+        <div class="sk sk-pill" style="width:22px;height:14px;opacity:.3;"></div>
+      </div>
+      <!-- Skeleton cards: 3 teacher/batch cards, fading -->
+      <div class="sk-tc">
+        <div class="sk-tc-body">
+          <div style="flex:1;padding-right:12px;">
+            <div class="sk sk-mb8" style="width:130px;height:14px;border-radius:6px;"></div>
+            <div class="sk sk-mb4" style="width:88px;height:9px;border-radius:4px;opacity:.6;"></div>
+            <div class="sk" style="width:68px;height:8px;border-radius:4px;opacity:.35;"></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="sk sk-mb8" style="width:64px;height:20px;border-radius:6px;"></div>
+            <div class="sk" style="width:42px;height:8px;border-radius:4px;opacity:.4;"></div>
+          </div>
+        </div>
+        <div class="sk-tc-tabs">
+          <div class="sk" style="height:40px;border-radius:10px;"></div>
+          <div class="sk" style="height:40px;border-radius:10px;opacity:.6;"></div>
+          <div class="sk" style="height:40px;border-radius:10px;opacity:.4;"></div>
+        </div>
+        <div class="sk-tc-pay">
+          <div class="sk" style="flex:1;height:48px;border-radius:14px;"></div>
+          <div class="sk" style="width:78px;height:48px;border-radius:14px;opacity:.7;"></div>
+        </div>
+        <div class="sk-tc-bar">
+          <div class="sk" style="width:88px;height:8px;border-radius:4px;opacity:.35;"></div>
+          <div class="sk" style="width:22px;height:22px;border-radius:7px;opacity:.3;"></div>
+        </div>
+      </div>
+      <div class="sk-tc" style="opacity:.5;">
+        <div class="sk-tc-body">
+          <div style="flex:1;padding-right:12px;">
+            <div class="sk sk-mb8" style="width:108px;height:14px;border-radius:6px;"></div>
+            <div class="sk" style="width:72px;height:9px;border-radius:4px;opacity:.6;"></div>
+          </div>
+          <div style="flex-shrink:0;">
+            <div class="sk" style="width:54px;height:20px;border-radius:6px;"></div>
+          </div>
+        </div>
+        <div class="sk-tc-tabs">
+          <div class="sk" style="height:40px;border-radius:10px;"></div>
+          <div class="sk" style="height:40px;border-radius:10px;opacity:.6;"></div>
+          <div class="sk" style="height:40px;border-radius:10px;opacity:.4;"></div>
+        </div>
+      </div>
+      <div class="sk-tc" style="opacity:.2;">
+        <div class="sk-tc-body">
+          <div style="flex:1;padding-right:12px;">
+            <div class="sk sk-mb8" style="width:92px;height:14px;border-radius:6px;"></div>
+            <div class="sk" style="width:60px;height:9px;border-radius:4px;opacity:.6;"></div>
+          </div>
+          <div style="flex-shrink:0;">
+            <div class="sk" style="width:48px;height:20px;border-radius:6px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- HISTORY SCREEN -->
+  <div class="hidden" id="historyScreen">
+    <div class="hist-topbar">
+      <button class="hist-back" onclick="closeHistoryScreen()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="hist-title">Payment History</div>
+      <button class="hist-export-btn" onclick="exportHistoryCSV()" id="histExportBtn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 10v1.5A1.5 1.5 0 0 0 2.5 13h9A1.5 1.5 0 0 0 13 11.5V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Export
+      </button>
+    </div>
+    <div class="hist-body" id="histBody">
+      <div class="hist-filter-row" id="histFilters"></div>
+      <div id="histContent"></div>
+    </div>
+  </div>
+
+  <!-- MENU BACKDROP -->
+  <div class="menu-backdrop hidden" id="menuBackdrop"></div>
+
+  <!-- USER MENU -->
+  <div class="user-menu hidden" id="userMenu">
+    <div class="menu-user-section">
+      <div class="menu-avatar" id="menuAvatar" onclick="closeMenu();setTimeout(openProfileModal,80);" style="cursor:pointer;" title="Edit profile">?</div>
+      <div class="menu-user-info">
+        <div class="menu-user-name" id="menuName">—</div>
+        <div class="menu-user-email" id="menuEmail">—</div>
+        <div class="menu-role-pill student" id="menuRolePill"><span style="display:inline-flex;align-items:center;gap:4px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0" ><path d="M2 8l6-4 6 4M4 9.5V13h8V9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="14" y1="8" x2="14" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Student</span></div>
+      </div>
+    </div>
+    <div class="menu-hr"></div>
+    <div class="menu-list">
+      <div class="menu-item" id="editProfileBtn">
+        <span class="menu-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        <span class="menu-item-label">Edit Profile</span>
+        <span style="display:flex;align-items:center;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="menu-item" id="menuNotifBtn">
+        <span id="menuNotifIcon" style="display:flex;align-items:center;justify-content:center;width:26px;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a5 5 0 0 0-5 5v3l-1 1v1h12v-1l-1-1V7a5 5 0 0 0-5-5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="menu-item-label" id="menuNotifLabel"><span class="notif-lbl-inner">Enable Reminders</span></span>
+        <div id="menuNotifSwitch" class="menu-notif-switch">
+          <div id="menuNotifKnob" class="menu-notif-knob"></div>
+          <div class="notif-particles" id="notifParticles"></div>
+        </div>
+      </div>
+      <div class="menu-item" id="menuThemeBtn">
+        <span id="menuThemeIcon"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>
+        <span class="menu-item-label" id="menuThemeLabel"><span class="lbl-inner">Dark Mode</span></span>
+        <div id="menuThemeSwitch" class="menu-theme-switch">
+          <div id="menuThemeKnob" class="menu-theme-knob"></div>
+          <div class="theme-particles" id="themeParticles"></div>
+        </div>
+      </div>
+      <div class="menu-item menu-item-install hidden" id="menuInstallBtn">
+        <span class="menu-item-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="menu-item-label">Add to Home Screen</span>
+        <span style="display:flex;align-items:center;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="menu-item" id="menuConnectBtn" onclick="closeMenu();setTimeout(()=>{ window.location.href='connect.html'; },80);">
+        <span class="menu-item-icon connect-notif-dot" id="connectIconWrap" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 9.5a3.536 3.536 0 0 0 5 0l2-2a3.536 3.536 0 0 0-5-5L7.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 6.5a3.536 3.536 0 0 0-5 0l-2 2a3.536 3.536 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="menu-item-connect-wrap">
+          <span class="menu-item-label" style="flex:none;">Connect</span>
+          <span class="menu-item-connect-sub hidden" id="connectNotifSub"></span>
+        </span>
+        <span style="display:flex;align-items:center;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="menu-item" id="menuHistoryBtn" onclick="closeMenu();openHistoryScreen()">
+        <span class="menu-item-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" fill="currentColor" opacity=".1" stroke="currentColor" stroke-width="1.4"/><polyline points="8,4.5 8,8 10.5,9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="menu-item-label">Payment History</span>
+        <span style="display:flex;align-items:center;color:var(--muted);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <div class="menu-item danger" id="signOutBtn">
+        <span class="menu-item-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 10.5L13 8l-2.5-2.5M6 8h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="menu-item-label">Sign out</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div class="modal-overlay hidden" id="profileModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="profileModalTitle">Edit Profile</div>
+        <button class="modal-close" id="closeProfileBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div id="roleSwitchNote" class="hidden" style="background:rgba(255,154,60,.08);border:1px solid rgba(255,154,60,.22);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--accent4);line-height:1.5;">&#x26A0;&#xFE0F; Switching roles will reload your dashboard.</div>
+
+      <!-- Avatar — tappable to focus name field -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:22px;">
+        <div style="position:relative;width:76px;height:76px;cursor:pointer;" onclick="document.getElementById('profileName')?.focus()">
+          <div style="width:76px;height:76px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 24px rgba(124,107,255,.4);">
+            <div id="profileAvatar" style="width:100%;height:100%;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:28px;font-weight:700;overflow:hidden;">?</div>
+          </div>
+          <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);box-shadow:0 2px 8px rgba(124,107,255,.4);">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M8 1l3 3-7 7H1V8L8 1z" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);letter-spacing:.4px;font-weight:500;">Tap to edit profile</div>
+      </div>
+
+      <!-- Role -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;">I am a…</div>
+        <div class="role-toggle">
+          <div class="role-opt" id="roleStudent" onclick="selectRole('student')">
+            <div class="role-opt-icon"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M26 11L8 21l18 10 18-10L26 11z" fill="currentColor" opacity=".12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13 25v8c0 4 5.8 7.5 13 7.5S39 37 39 33v-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="44" y1="21" x2="44" y2="31" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="44" cy="33" r="2.2" fill="currentColor"/></svg></div>
+            <div class="role-opt-label">Student</div>
+            <div class="role-opt-sub">Track my tuition fees</div>
+          </div>
+          <div class="role-opt" id="roleTeacher" onclick="selectRole('teacher')">
+            <div class="role-opt-icon"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M26 9L5 21l21 12 21-12L26 9z" fill="currentColor" opacity=".1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 30l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><path d="M5 39l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/></svg></div>
+            <div class="role-opt-label">Teacher</div>
+            <div class="role-opt-sub">Manage my batches</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Name -->
+      <div class="field-group">
+        <label>Your Name</label>
+        <input class="field-input" id="profileName" type="text" placeholder="e.g. Debaguin" maxlength="40" autocomplete="name">
+      </div>
+
+      <!-- Student fields -->
+      <div id="studentFields">
+        <div class="field-group">
+          <label>Class / Grade / Year</label>
+          <div class="chips-grid">
+            <div class="chip" data-val="Class 9"  onclick="selectChip(this)">Cls 9</div>
+            <div class="chip" data-val="Class 10" onclick="selectChip(this)">Cls 10</div>
+            <div class="chip" data-val="Class 11" onclick="selectChip(this)">Cls 11</div>
+            <div class="chip" data-val="Class 12" onclick="selectChip(this)">Cls 12</div>
+            <div class="chip" data-val="1st Year" onclick="selectChip(this)">1st Yr</div>
+            <div class="chip" data-val="2nd Year" onclick="selectChip(this)">2nd Yr</div>
+            <div class="chip" data-val="3rd Year" onclick="selectChip(this)">3rd Yr</div>
+            <div class="chip" data-val="Graduation" onclick="selectChip(this)">Grad</div>
+          </div>
+          <input class="field-input" id="profileClass" type="text" placeholder="Or type your own class/grade…" maxlength="30">
+          <div class="field-hint">E.g. Class 10, B.Tech 2nd Year, Graduation</div>
+        </div>
+      </div>
+
+      <!-- Teacher fields -->
+      <div id="teacherFields" class="hidden">
+        <div class="field-group">
+          <label>Subjects You Teach</label>
+          <div class="subject-tags" id="subjectTagsDisplay"></div>
+          <div class="add-tag-row">
+            <input class="add-tag-input" id="subjectTagInput" type="text" placeholder="e.g. Physics, Math…" maxlength="30">
+            <button class="add-tag-btn" onclick="addSubjectTag()">+ Add</button>
+          </div>
+          <div class="field-hint">Press Enter or tap Add after each subject</div>
+        </div>
+        <div class="field-group">
+          <label>Classes You Teach</label>
+          <div class="subject-tags" id="classTagsDisplay"></div>
+          <div class="chips-grid" style="margin-bottom:8px;">
+            <div class="chip" data-val="Class 9"   onclick="toggleClassChip(this)">Cls 9</div>
+            <div class="chip" data-val="Class 10"  onclick="toggleClassChip(this)">Cls 10</div>
+            <div class="chip" data-val="Class 11"  onclick="toggleClassChip(this)">Cls 11</div>
+            <div class="chip" data-val="Class 12"  onclick="toggleClassChip(this)">Cls 12</div>
+            <div class="chip" data-val="1st Year"  onclick="toggleClassChip(this)">1st Yr</div>
+            <div class="chip" data-val="2nd Year"  onclick="toggleClassChip(this)">2nd Yr</div>
+            <div class="chip" data-val="3rd Year"  onclick="toggleClassChip(this)">3rd Yr</div>
+            <div class="chip" data-val="Graduation" onclick="toggleClassChip(this)">Grad</div>
+          </div>
+          <div class="add-tag-row">
+            <input class="add-tag-input" id="classTagInput" type="text" placeholder="Or type a custom class…" maxlength="30">
+            <button class="add-tag-btn" onclick="addClassTag()">+ Add</button>
+          </div>
+          <div class="field-hint">Select or type all classes you teach</div>
+        </div>
+        <div class="field-group">
+          <label>Academic Session</label>
+          <input class="field-input" id="profileSession" type="text" placeholder="e.g. 2025–26" maxlength="20">
+          <div class="field-hint">The current academic session or year</div>
+        </div>
+      </div>
+
+      <!-- Theme Toggle -->
+      <div class="theme-toggle-row" id="themeToggleRow" onclick="toggleTheme()">
+        <div class="theme-toggle-left">
+          <div class="theme-toggle-icon" id="themeToggleIcon"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
+          <div class="theme-toggle-info">
+            <div class="theme-toggle-title">Appearance</div>
+            <div class="theme-toggle-label" id="themeToggleLabel">Dark Mode</div>
+          </div>
+        </div>
+        <div id="themeToggleSwitch" style="width:48px;height:26px;border-radius:13px;background:var(--accent);border:none;position:relative;transition:background .25s;flex-shrink:0;">
+          <div id="themeToggleKnob" style="position:absolute;top:3px;left:25px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .22s cubic-bezier(.34,1.4,.64,1);box-shadow:0 1px 4px rgba(0,0,0,.3);"></div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="saveProfileBtn" style="width:100%;margin-top:6px;padding:15px;border-radius:16px;font-size:15px;">Save Profile</button>
+    </div>
+  </div>
+
+
+  <!-- SELECTION ACTION BAR -->
+  <div class="sel-bar hidden" id="selBar">
+    <button class="sel-bar-close" id="selBarClose" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <div class="sel-bar-count"><span id="selCount">0</span> selected</div>
+    <button class="sel-bar-btn hidden" id="selAssignBtn"><span class="sbi" style="display:flex;align-items:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="7.5" x2="8" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="10.5" y1="5" x2="10.5" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="7.5" x2="10.5" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>Assign</span></button>
+    <button class="sel-bar-btn danger" id="selDeleteBtn"><span class="sbi" style="display:flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M6 4V2h4v2M5 4l1 9h4l1-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Delete</span></button>
+  </div>
+
+  <!-- ASSIGN TO BATCH MODAL (teacher role) -->
+  <div class="modal-overlay hidden" id="assignBatchModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Add to Batch</div>
+        <button class="modal-close" id="closeAssignBatchBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+        Pick a batch to move the selected student(s) into, or create a new batch first.
+      </div>
+      <div id="assignBatchList"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelAssignBatchBtn">Cancel</button>
+        <button class="btn-primary" id="confirmAssignBatchBtn">Move to Batch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEACHER ADD CHOICE SHEET -->
+  <div class="modal-overlay hidden" id="teacherAddChoiceSheet">
+    <div class="modal-sheet" style="padding-bottom:36px;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">What would you like to add?</div>
+        <button class="modal-close" onclick="document.getElementById('teacherAddChoiceSheet').classList.add('hidden')" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0 8px;">
+        <button onclick="document.getElementById('teacherAddChoiceSheet').classList.add('hidden');openAddBatchModal();" style="
+          display:flex;flex-direction:column;align-items:center;gap:10px;
+          background:var(--surface2);border:1.5px solid var(--border2);
+          border-radius:18px;padding:22px 12px;cursor:pointer;
+          transition:all .18s;user-select:none;">
+          <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--accent3);"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4L2 8l8 4 8-4-8-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M2 8v5M6 10v4a4 4 0 0 0 8 0v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="8" x2="16" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);">Add Batch</div>
+          <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.5;">Group of students with one fee structure</div>
+        </button>
+        <button onclick="document.getElementById('teacherAddChoiceSheet').classList.add('hidden');openAddStandaloneStudent();" style="
+          display:flex;flex-direction:column;align-items:center;gap:10px;
+          background:var(--surface2);border:1.5px solid var(--border2);
+          border-radius:18px;padding:22px 12px;cursor:pointer;
+          transition:all .18s;user-select:none;">
+          <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--accent);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);">Add Student</div>
+          <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.5;">Individual student, no batch required</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD STANDALONE STUDENT MODAL (teacher role, no batch) -->
+  <div class="modal-overlay hidden" id="addStandaloneStudentModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Add Student</div>
+        <button class="modal-close" id="closeStandaloneStudentBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="field-group">
+        <label>Student Name</label>
+        <input class="field-input" id="ssNameInp" placeholder="e.g. Rahul Sharma" maxlength="40">
+      </div>
+      <div class="field-group">
+        <label>Admission Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="ssDateInp" type="date">
+      </div>
+      <div class="field-group">
+        <label>Payment Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional — dues from here)</span></label>
+        <input class="field-input" id="ssPayDateInp" type="date">
+        <div class="field-hint">Leave blank to start dues from today.</div>
+      </div>
+      <div class="field-group">
+        <label>Monthly Fee (₹)</label>
+        <input class="field-input" id="ssFeeInp" type="number" placeholder="500">
+      </div>
+      <div class="field-group">
+        <label>Assign to Batch <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <select class="field-input" id="ssBatchSel">
+          <option value="">No batch — standalone</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelStandaloneStudentBtn">Cancel</button>
+        <button class="btn-primary" id="confirmStandaloneStudentBtn">Add Student</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- EDIT TEACHER MODAL (student role) -->
+  <div class="modal-overlay hidden" id="editTeacherModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Edit Teacher</div>
+        <button class="modal-close" id="closeEditTeacherBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="field-group">
+        <label>Teacher Name</label>
+        <input class="field-input" id="editTeacherNameInp" placeholder="e.g. Arpan sir" maxlength="40">
+      </div>
+      <div class="field-group">
+        <label>Subject</label>
+        <input class="field-input" id="editTeacherSubjectInp" placeholder="e.g. Physics">
+      </div>
+      <div class="field-group">
+        <label>Monthly Fee (₹)</label>
+        <input class="field-input" id="editTeacherFeeInp" type="number" placeholder="500">
+      </div>
+      <div class="field-group">
+        <label>Last Payment Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="editTeacherPayDateInp" type="date">
+        <div class="field-hint">Update the last paid date to correct due calculation.</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelEditTeacherBtn">Cancel</button>
+        <button class="btn-primary" id="confirmEditTeacherBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT STANDALONE STUDENT MODAL -->
+  <div class="modal-overlay hidden" id="editStandaloneStudentModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Edit Student</div>
+        <button class="modal-close" id="closeEditSsBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="field-group">
+        <label>Student Name</label>
+        <input class="field-input" id="editSsNameInp" maxlength="40">
+      </div>
+      <div class="field-group">
+        <label>Monthly Fee (₹)</label>
+        <input class="field-input" id="editSsFeeInp" type="number" placeholder="500">
+      </div>
+      <div class="field-group">
+        <label>Admission Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="editSsDateInp" type="date">
+      </div>
+      <div class="field-group">
+        <label>Last Payment Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="editSsPayDateInp" type="date">
+        <div class="field-hint">Dues calculated from this date.</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelEditSsBtn">Cancel</button>
+        <button class="btn-primary" id="confirmEditSsBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD MODAL -->
+  <div class="modal-overlay hidden" id="addModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="addModalTitle">Add Teacher</div>
+      </div>
+
+      <!-- Student: add teacher -->
+      <div id="addStudentFields">
+        <div class="field-group">
+          <label>Teacher Name</label>
+          <input class="field-input" id="f-name" placeholder="e.g. Arpan sir">
+        </div>
+        <div class="field-group">
+          <label>Subject</label>
+          <input class="field-input" id="f-subject" placeholder="e.g. Physics">
+        </div>
+        <div class="field-group">
+          <label>Monthly Fee (₹)</label>
+          <input class="field-input" id="f-fee" type="number" placeholder="500">
+        </div>
+        <div class="field-group">
+          <label>Last Payment Date</label>
+          <input class="field-input" id="f-lastpaid" type="date">
+          <div class="field-hint">Set to the last month you paid. Leave blank to start dues from last month.</div>
+        </div>
+      </div>
+
+      <!-- Teacher: add batch -->
+      <div id="addTeacherFields" class="hidden">
+        <div class="field-group">
+          <label>Batch Name</label>
+          <input class="field-input" id="b-name" placeholder="e.g. Morning Batch Class 10">
+        </div>
+        <div class="field-group">
+          <label>Subjects for This Batch</label>
+          <input class="field-input" id="b-subject" placeholder="e.g. Physics, Chemistry">
+        </div>
+        <div class="field-row" style="margin-bottom:15px;">
+          <div class="field-group" style="margin-bottom:0">
+            <label>Class / Grade</label>
+            <input class="field-input" id="b-class" placeholder="e.g. Class 10">
+          </div>
+          <div class="field-group" style="margin-bottom:0">
+            <label>Session</label>
+            <input class="field-input" id="b-session" placeholder="e.g. 2025–26">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Monthly Fee Per Student (₹)</label>
+          <input class="field-input" id="b-fee" type="number" placeholder="500">
+        </div>
+        <div class="field-group">
+          <label>Timing / Schedule</label>
+          <input class="field-input" id="b-timing" placeholder="e.g. Mon/Wed/Fri 8–9 AM">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelAddBtn">Cancel</button>
+        <button class="btn-primary" id="confirmAddBtn">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATCH DETAIL SCREEN -->
+  <div id="batchDetailScreen" class="hidden">
+    <div class="bd-topbar">
+      <button class="bd-back" onclick="closeBatchDetail()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="bd-title-wrap">
+        <div class="bd-title" id="bdTitle">Batch</div>
+        <div class="bd-sub" id="bdSub"></div>
+      </div>
+      <button class="bd-add-btn" id="bdAddStudentBtn" style="width:auto;padding:0 14px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;">+ Add Students</button>
+    </div>
+    <div class="bd-body" id="bdBody"></div>
+  </div>
+
+  <!-- ADD STUDENT MODAL -->
+  <div class="modal-overlay hidden" id="addStudentModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Add Students</div>
+        <button class="modal-close" id="closeAddStudentBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="field-group">
+        <label>Student Name</label>
+        <input class="field-input" id="newStudentNameInp" placeholder="e.g. Rahul Sharma" maxlength="40" style="margin-bottom:12px;">
+        <label>Admission Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="newStudentDateInp" type="date" style="margin-bottom:12px;">
+        <label>Payment Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional — due calculated from here)</span></label>
+        <input class="field-input" id="newStudentPayDateInp" type="date" style="margin-bottom:12px;">
+        <div class="field-hint" style="margin-top:-8px;margin-bottom:12px;">If set, dues start from this date. Otherwise uses admission date or today.</div>
+        <label>Fee Status</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div id="feeStatusNever" onclick="setNewFeeStatus('never')" style="padding:14px 12px;border-radius:16px;border:1.5px solid var(--accent3);background:rgba(0,212,170,.1);cursor:pointer;text-align:center;transition:all .18s;user-select:none;">
+            <div style="font-size:18px;margin-bottom:4px;">&#x1F6AB;</div>
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);">Never Paid</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Dues from admission</div>
+          </div>
+          <div id="feeStatusDate" onclick="setNewFeeStatus('date')" style="padding:14px 12px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;transition:all .18s;user-select:none;">
+            <div style="font-size:18px;margin-bottom:4px;">&#x1F4C5;</div>
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);">Last Paid On</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Set payment date</div>
+          </div>
+        </div>
+        <div id="lastPaidDateWrap" style="display:none;margin-bottom:8px;">
+          <label style="margin-top:4px;">Last Payment Date</label>
+          <input class="field-input" id="newStudentLastPaidInp" type="date" style="margin-top:6px;">
+          <div class="field-hint">Dues will be calculated from this date onwards.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn-cancel" id="addOneStudentBtn" style="flex:1;height:46px;border-radius:14px;font-weight:700;font-family:'Syne',sans-serif;">+ Add</button>
+        </div>
+        <div class="field-hint" style="margin-top:6px;">Add multiple students, then tap Save All.</div>
+      </div>
+      <div class="student-list-preview" id="pendingStudentsList"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="cancelAddStudentBtn">Cancel</button>
+        <button class="btn-primary" id="saveStudentsBtn" style="background:linear-gradient(135deg,var(--accent3),#00a884);box-shadow:0 4px 18px rgba(0,212,170,.3);">Save All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT STUDENT MODAL -->
+  <div class="modal-overlay hidden" id="editStudentModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title">Edit Student</div>
+        <button class="modal-close" id="closeEditStudentBtn" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="field-group">
+        <label>Student Name</label>
+        <input class="field-input" id="editStudentNameInp" placeholder="e.g. Rahul Sharma" maxlength="40" style="margin-bottom:12px;">
+        <label>Admission Date <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <input class="field-input" id="editStudentDateInp" type="date" style="margin-bottom:12px;">
+        <label>Fee Status</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div id="editFeeStatusNever" onclick="setEditFeeStatus('never')" style="padding:12px 10px;border-radius:14px;border:1.5px solid var(--accent3);background:rgba(0,212,170,.1);cursor:pointer;text-align:center;transition:all .15s;user-select:none;">
+            <div style="font-size:18px;margin-bottom:4px;">&#x1F6AB;</div>
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);">Never Paid</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Dues from admission</div>
+          </div>
+          <div id="editFeeStatusDate" onclick="setEditFeeStatus('date')" style="padding:12px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;transition:all .15s;user-select:none;">
+            <div style="font-size:18px;margin-bottom:4px;">&#x1F4C5;</div>
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);">Last Paid On</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Set payment date</div>
+          </div>
+        </div>
+        <div id="editLastPaidDateWrap" style="display:none;margin-bottom:8px;">
+          <label style="margin-top:4px;">Last Payment Date</label>
+          <input class="field-input" id="editStudentLastPaidInp" type="date" style="margin-top:6px;">
+          <div class="field-hint">Dues calculated from this date onwards.</div>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn-cancel" id="cancelEditStudentBtn">Cancel</button>
+        <button class="btn-primary" id="saveEditStudentBtn" style="background:linear-gradient(135deg,var(--accent),#5a4de6);box-shadow:0 4px 18px rgba(124,107,255,.3);">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM -->
+  <div class="confirm-overlay hidden" id="confirmOverlay">
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirmIcon" style="display:flex;align-items:center;justify-content:center;margin-bottom:16px;"><svg width="40" height="40" viewBox="0 0 16 16" fill="none"><path d="M7 2L0.5 13h13L7 2z" stroke="var(--yellow)" stroke-width="1.4" stroke-linejoin="round"/><line x1="7" y1="6.5" x2="7" y2="9.5" stroke="var(--yellow)" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="11.2" r=".7" fill="var(--yellow)"/></svg></div>
+      <div class="confirm-title" id="confirmTitle">Confirm</div>
+      <div class="confirm-msg" id="confirmMsg"></div>
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="confirmCancelBtn">Cancel</button>
+        <button class="btn-primary" id="confirmOkBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- TEACHER DETAIL SHEET -->
+  <div class="modal-overlay hidden" id="teacherDetailSheet">
+    <div class="modal-sheet" id="teacherDetailSheetInner" style="padding-bottom:max(52px,calc(32px + env(safe-area-inset-bottom)));">
+      <div class="modal-handle" id="teacherDetailHandle"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.4px;line-height:1.15;" id="tdsName"></div>
+          <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="tdsSubject"></div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1.5px;line-height:1;" id="tdsDueAmt"></span>
+            <span id="tdsDueMonths" style="font-size:12px;color:var(--muted);font-weight:600;"></span>
+            <span id="tdsOverdueBadge"></span>
+          </div>
+          <div id="tdsLastPaid" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+          <div id="tdsPartialChip" style="margin-top:4px;"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;padding-top:2px;">
+          <button id="tdsEditBtn" style="width:34px;height:34px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Edit">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9H2v-3L11 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="tdsDeleteBtn" style="width:34px;height:34px;border-radius:12px;background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.18);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Delete">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M6 4V2h4v2M5 4l1 9h4l1-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="tdsCloseBtn" style="width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="tdsPaySection">
+        <div class="pay-tabs" id="tdsPayTabs" style="margin-bottom:10px;"></div>
+        <div id="tdsPayRows"></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Payment History
+        </div>
+        <div id="tdsHistory"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+
+
+
+  <!-- TEACHER ANALYTICS DASHBOARD -->
+  <div id="teacherDashScreen" class="dash-screen hidden">
+    <div class="dash-topbar">
+      <button class="bd-back" onclick="window.closeTeacherDash&&window.closeTeacherDash()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="dash-title-wrap">
+        <div class="dash-title">Analytics</div>
+        <div class="dash-sub" id="teacherDashSub">Teacher Dashboard</div>
+      </div>
+      <button class="dash-refresh" id="teacherDashRefresh" onclick="openTeacherDash(true)" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 4 1.7L14 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 3v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="dash-body" id="teacherDashBody">
+      <div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="2" y="22" width="8" height="14" rx="2" fill="currentColor" opacity=".35"/><rect x="13" y="14" width="8" height="22" rx="2" fill="currentColor" opacity=".6"/><rect x="24" y="6" width="8" height="30" rx="2" fill="currentColor" opacity=".85"/><path d="M2 36h36" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".3"/></svg></div><div class="dash-empty-txt">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- STUDENT ANALYTICS DASHBOARD -->
+  <div id="studentDashScreen" class="dash-screen hidden">
+    <div class="dash-topbar">
+      <button class="bd-back" onclick="window.closeStudentDash&&window.closeStudentDash()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="dash-title-wrap">
+        <div class="dash-title">My Overview</div>
+        <div class="dash-sub">Payment Analytics</div>
+      </div>
+      <button class="dash-refresh" id="studentDashRefresh" onclick="renderStudentDash()" style="display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 4 1.7L14 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 3v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="dash-body" id="studentDashBody">
+      <div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="2" y="22" width="8" height="14" rx="2" fill="currentColor" opacity=".35"/><rect x="13" y="14" width="8" height="22" rx="2" fill="currentColor" opacity=".6"/><rect x="24" y="6" width="8" height="30" rx="2" fill="currentColor" opacity=".85"/><path d="M2 36h36" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".3"/></svg></div><div class="dash-empty-txt">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION PERMISSION BANNER -->
+  <div id="notifBanner" style="
+    position:fixed; bottom:0; left:0; right:0; z-index:550;
+    padding:0 14px 14px; transform:translateY(100%);
+    transition:transform .35s cubic-bezier(.34,1.2,.64,1);
+    pointer-events:none;
+  ">
+    <div style="
+      background:linear-gradient(135deg,#1c1c38,#15152a);
+      border:1px solid rgba(124,107,255,.25);
+      border-radius:18px; padding:16px 18px;
+      box-shadow:0 8px 40px rgba(0,0,0,.5);
+      pointer-events:auto;
+      display:flex; flex-direction:column; gap:12px;
+    ">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(124,107,255,.14);border-radius:50%;flex-shrink:0;color:var(--accent);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a5 5 0 0 0-5 5v3l-1 1v1h12v-1l-1-1V7a5 5 0 0 0-5-5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#ebebf5;margin-bottom:4px;">Never miss a fee due date</div>
+          <div style="font-size:12px;color:#8e8eb8;line-height:1.5;">Get a monthly reminder when fees are pending and a receipt every time you mark a payment.</div>
+        </div>
+        <button id="notifBannerClose" style="background:none;border:none;color:#50507a;cursor:pointer;padding:4px;display:flex;align-items:center;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="notifBannerAllow" style="
+          flex:2; padding:12px; border:none; border-radius:12px;
+          background:linear-gradient(135deg,var(--accent),#5a4de6);
+          color:#fff; font-family:'Syne',sans-serif; font-size:13px;
+          font-weight:700; cursor:pointer; letter-spacing:.3px;
+        ">Allow Notifications</button>
+        <button id="notifBannerDismiss" style="
+          flex:1; padding:12px; border:1px solid rgba(255,255,255,.1);
+          border-radius:12px; background:transparent;
+          color:#8e8eb8; font-size:13px; cursor:pointer;
+        ">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA INSTALL BANNER -->
+  <div class="pwa-banner hidden" id="pwaBanner">
+    <div class="pwa-banner-inner">
+      <div class="pwa-banner-top">
+        <div class="pwa-banner-icon" style="padding:0;overflow:hidden;"><img src="icons/icon-192.png" alt="Fee Tracker" style="width:46px;height:46px;border-radius:var(--r-lg);display:block;object-fit:cover;"/></div>
+        <div class="pwa-banner-text">
+          <div class="pwa-banner-title">Install Fee Tracker</div>
+          <div class="pwa-banner-sub">Add to home screen for the full app experience &mdash; works offline too.</div>
+        </div>
+        <button class="pwa-banner-close" id="pwaBannerClose"><svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="pwa-banner-actions">
+        <button class="pwa-banner-install" id="pwaBannerInstall"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:middle;margin-right:6px"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Install App</button>
+        <button class="pwa-banner-later" id="pwaBannerLater">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA INSTALL BANNER -->
+  <div id="installBanner">
+    <div class="install-sheet">
+      <div class="install-handle"></div>
+      <div class="install-row">
+        <div class="install-icon" style="padding:0;overflow:hidden;"><img src="icons/icon-192.png" alt="Fee Tracker" style="width:48px;height:48px;border-radius:var(--r-lg);display:block;object-fit:cover;"/></div>
+        <div class="install-text-wrap">
+          <div class="install-title">Install Fee Tracker</div>
+          <div class="install-sub">Add to home screen for quick access.<br>Works offline. No app store needed.</div>
+        </div>
+      </div>
+      <div class="install-actions">
+        <button class="install-skip" id="installSkipBtn">Not now</button>
+        <button class="install-btn" id="installAddBtn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M7 1v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 10v1.5A1.5 1.5 0 0 0 2.5 13h9A1.5 1.5 0 0 0 13 11.5V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Add to Home Screen</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script type="module" src="js/app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
