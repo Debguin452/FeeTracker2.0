@@ -14,8 +14,8 @@
   "kv_namespaces": [
     {
       "binding": "RATE_LIMIT_KV",
-      "id": "8e88c9f409ad4b07928d8e4e1a89ede2",
-      "preview_id": "8e88c9f409ad4b07928d8e4e1a89ede2"
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID",
+      "preview_id": "REPLACE_WITH_YOUR_PREVIEW_KV_ID"
     }
   ]
 }
