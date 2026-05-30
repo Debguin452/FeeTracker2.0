@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v11';
+const CACHE_VERSION = 'ft-v12';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
@@ -264,8 +264,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Let browser handle all Firebase/Google API requests natively — no SW interference
   if (BYPASS_PATTERNS.some(p => request.url.includes(p))) {
-    event.respondWith(fetch(request));
     return;
   }
 
@@ -276,6 +276,8 @@ self.addEventListener('fetch', event => {
 
   if (isShell) { event.respondWith(swrShell(request)); return; }
   if (CDN_PATTERNS.some(p => request.url.includes(p))) { event.respondWith(cacheFirst(request, STATIC_CACHE)); return; }
+  // Extra safety: bypass any googleapis.com or gstatic.com not caught above
+  if (url.hostname.endsWith('.googleapis.com') || url.hostname.endsWith('.gstatic.com')) { return; }
 
   if (url.origin === self.location.origin) {
     const ext = url.pathname.split('.').pop().toLowerCase();
