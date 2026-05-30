@@ -40,7 +40,7 @@ import { getMessaging, getToken, onMessage }
 })();
 
 // ── PROJECT 1 (primary — your existing project) ──────────────────────────
-const cfg1 = { apiKey:"AIzaSyDlpLbd5g78eHv_elhiiLRlOdhPMvn9ijA", authDomain:"fee-tracker-f32f8.firebaseapp.com", projectId:"fee-tracker-f32f8", storageBucket:"fee-tracker-f32f8.firebasestorage.app", messagingSenderId:"1061066310105", appId:"1:1061066310105:web:4ca8c0feaa9d6614cd19c8" };
+const cfg1 = { apiKey:"AIzaSyDlpLbd5g78eHv_elhiiLRlOdhPMvn9ijA", authDomain:"feetracker.pages.dev", projectId:"fee-tracker-f32f8", storageBucket:"fee-tracker-f32f8.firebasestorage.app", messagingSenderId:"1061066310105", appId:"1:1061066310105:web:4ca8c0feaa9d6614cd19c8" };
 
 // ── PROJECT 2 (secondary — fill in your second Firebase project config) ──
 // Create a second Firebase project at console.firebase.google.com,
