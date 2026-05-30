@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /functions/
+Sitemap: https://feetracker2.pages.dev/sitemap.xml

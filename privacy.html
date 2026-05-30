@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Privacy Policy — Fee Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080812" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2fa" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#06060f; --surface:#0d0d1f; --surface2:#131328; --surface3:#1a1a35;
+      --border:rgba(255,255,255,.065); --border2:rgba(255,255,255,.11);
+      --accent:#7c6bff; --accent2:#ff6b9d; --accent3:#00d4aa; --accent4:#ff9a3c;
+      --accent-dim:rgba(124,107,255,.13);
+      --text:#eeeef8; --text2:#8a8ab5; --muted:#4a4a72;
+      --red:#ff4d6d;
+      --r-xl:22px; --r-lg:15px; --r-md:11px; --r-sm:7px;
+      --card-shadow:0 1px 0 rgba(255,255,255,.04),0 4px 20px rgba(0,0,0,.3);
+    }
+    :root.light {
+      --bg:#f0f0f8; --surface:#ffffff; --surface2:#e8e8f4; --surface3:#d8d8ee;
+      --border:rgba(80,80,140,.09); --border2:rgba(80,80,140,.16);
+      --accent:#6255e8; --accent2:#e8527a; --accent3:#00b894; --accent4:#e07020;
+      --accent-dim:rgba(98,85,232,.12);
+      --text:#18182e; --text2:#4e4e82; --muted:#8888b2;
+      --red:#d63050;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+    @keyframes ftSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes ftFadeIn{from{opacity:0}to{opacity:1}}
+
+    .blob{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;}
+    .blob1{width:500px;height:500px;background:radial-gradient(circle,rgba(124,107,255,.13) 0%,transparent 70%);top:-120px;left:-120px;}
+    .blob2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,157,.09) 0%,transparent 70%);bottom:-80px;right:-80px;}
+
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,16px) + 12px) 18px 12px;background:linear-gradient(180deg,var(--bg) 78%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+    .back-btn{width:38px;height:38px;border-radius:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,transform .12s;text-decoration:none;}
+    .back-btn:active{transform:scale(.9);background:var(--surface3);}
+    .topbar-info{flex:1;}
+    .topbar-label{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;font-weight:600;}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
+
+    .logo-mark{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);flex-shrink:0;}
+    .logo-mark span{font-size:17px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;}
+
+    .page{position:relative;z-index:1;padding:calc(env(safe-area-inset-top,16px) + 72px) 0 60px;max-width:720px;margin:0 auto;animation:ftFadeIn .35s ease both;}
+
+    .hero{padding:0 20px 36px;text-align:center;animation:ftSlideUp .35s ease both;}
+    .hero-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;}
+    .hero-icon{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);}
+    .hero-icon span{font-size:30px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;}
+    .hero-wordmark{text-align:left;}
+    .hero-wordmark-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(140deg,#ffffff 0%,#c8baff 55%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero-wordmark-sub{font-size:10px;color:var(--muted);letter-spacing:4px;text-transform:uppercase;font-weight:600;}
+    :root.light .hero-wordmark-name{background:linear-gradient(140deg,#18182e 0%,#6255e8 55%,#e8527a 100%);-webkit-background-clip:text;background-clip:text;}
+    .hero-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.8px;margin-bottom:10px;color:var(--text);}
+    .hero-meta{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;}
+    .hero-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text2);font-weight:500;}
+    .hero-chip svg{opacity:.7;}
+
+    .content{padding:0 20px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:24px;margin-bottom:16px;box-shadow:var(--card-shadow);animation:ftSlideUp .35s ease both;}
+    .card-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;}
+    .card-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .card-icon.purple{background:rgba(124,107,255,.14);color:var(--accent);}
+    .card-icon.pink{background:rgba(255,107,157,.12);color:var(--accent2);}
+    .card-icon.teal{background:rgba(0,212,170,.1);color:var(--accent3);}
+    .card-icon.orange{background:rgba(255,154,60,.12);color:var(--accent4);}
+    .card-icon.red{background:rgba(255,77,109,.1);color:var(--red);}
+    .card-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:3px;}
+    .card-num{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+
+    .prose p{color:var(--text2);font-size:14px;line-height:1.75;margin-bottom:12px;}
+    .prose p:last-child{margin-bottom:0;}
+    .prose strong{color:var(--text);font-weight:600;}
+    .prose em{color:var(--accent);font-style:normal;font-weight:600;}
+
+    .data-table{width:100%;border-collapse:collapse;margin:12px 0;}
+    .data-table th{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+    .data-table td{font-size:13px;color:var(--text2);padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5;}
+    .data-table td:first-child{color:var(--text);font-weight:500;white-space:nowrap;}
+    .data-table tr:last-child td{border-bottom:none;}
+    .data-table .badge{display:inline-block;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;letter-spacing:.3px;}
+    .data-table .badge.teal{background:rgba(0,212,170,.1);color:var(--accent3);}
+    .data-table .badge.orange{background:rgba(255,154,60,.1);color:var(--accent4);}
+
+    .highlight-box{background:var(--accent-dim);border:1px solid rgba(124,107,255,.2);border-radius:var(--r-lg);padding:14px 16px;margin:14px 0;display:flex;align-items:flex-start;gap:10px;}
+    .highlight-box.teal{background:rgba(0,212,170,.08);border-color:rgba(0,212,170,.2);}
+    .highlight-box.orange{background:rgba(255,154,60,.08);border-color:rgba(255,154,60,.2);}
+    .highlight-box svg{flex-shrink:0;margin-top:1px;}
+    .highlight-box p{font-size:13px;color:var(--text2);line-height:1.6;margin:0;}
+    .highlight-box strong{color:var(--text);}
+
+    .divider{height:1px;background:var(--border);margin:6px 0 20px;}
+
+    .toc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:20px;}
+    .toc-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px;}
+    .toc-list{list-style:none;display:flex;flex-direction:column;gap:4px;}
+    .toc-list a{font-size:13px;color:var(--text2);text-decoration:none;display:flex;align-items:center;gap:8px;padding:4px 0;transition:color .15s;}
+    .toc-list a:hover{color:var(--accent);}
+    .toc-list a::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:.5;flex-shrink:0;}
+
+    .footer-note{text-align:center;padding:24px 20px 0;color:var(--muted);font-size:12px;line-height:1.8;}
+    .footer-note a{color:var(--accent);text-decoration:none;}
+
+    @media(min-width:680px){.card{padding:32px;}.content{padding:0 28px;}.hero{padding:0 28px 40px;}}
+  </style>
+  <script src="js/theme.js"></script>
+</head>
+<body>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+
+  <div class="topbar">
+    <a class="back-btn" href="index.html" aria-label="Back">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div class="logo-mark"><span>₹</span></div>
+    <div class="topbar-info">
+      <div class="topbar-label">Fee Tracker</div>
+      <div class="topbar-title">Privacy Policy</div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="hero">
+      <div class="hero-logo">
+        <div class="hero-icon"><span>₹</span></div>
+        <div class="hero-wordmark">
+          <div class="hero-wordmark-name">Fee Tracker</div>
+          <div class="hero-wordmark-sub">Smart · Simple · Personal</div>
+        </div>
+      </div>
+      <div class="hero-title">Privacy Policy</div>
+      <div class="hero-meta">
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M6 4v3M6 8.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Effective 1 June 2025</span>
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L7.5 4.5H11L8.5 6.5 9.5 10 6 8 2.5 10l1-3.5L1 4.5h3.5L6 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Jurisdiction: India</span>
+        <span class="hero-chip"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5h4M4 7.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>v2.0</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="toc">
+        <div class="toc-title">Contents</div>
+        <ul class="toc-list">
+          <li><a href="#s1">Definitions &amp; Interpretation</a></li>
+          <li><a href="#s2">Data Controller Identity</a></li>
+          <li><a href="#s3">Data We Collect</a></li>
+          <li><a href="#s4">Legal Basis for Processing</a></li>
+          <li><a href="#s5">Purpose &amp; Use of Data</a></li>
+          <li><a href="#s6">Third-Party Sub-Processors</a></li>
+          <li><a href="#s7">Data Retention &amp; Deletion</a></li>
+          <li><a href="#s8">Security Measures</a></li>
+          <li><a href="#s9">User Rights</a></li>
+          <li><a href="#s10">Cookies &amp; Local Storage</a></li>
+          <li><a href="#s11">Children's Privacy</a></li>
+          <li><a href="#s12">Limitation of Liability</a></li>
+          <li><a href="#s13">Amendments</a></li>
+          <li><a href="#s14">Governing Law</a></li>
+          <li><a href="#s15">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="highlight-box orange">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="var(--accent4)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3" stroke="var(--accent4)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".8" fill="var(--accent4)"/></svg>
+        <p><strong>Plain-language summary:</strong> Fee Tracker stores your fee and payment records in Firebase (Google Cloud). We do not sell your data, show ads, or share your information with third parties for commercial purposes. The operator is not liable for data loss, service interruptions, or consequential damages arising from your use of the Service.</p>
+      </div>
+
+      <div id="s1" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 9h8M5 6h5M5 12h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 1</div><div class="card-title">Definitions &amp; Interpretation</div></div>
+        </div>
+        <div class="prose">
+          <p>In this Privacy Policy, the following terms shall have the meanings ascribed to them below unless the context otherwise requires:</p>
+          <p><strong>"Service"</strong> means the Fee Tracker web application, progressive web application (PWA), and all associated features accessible at the domain on which this Policy is published.</p>
+          <p><strong>"Operator"</strong> means the individual or entity that deploys, hosts, and maintains the Service. The Operator is the Data Controller as defined under applicable data protection law.</p>
+          <p><strong>"User"</strong> means any natural person who accesses, registers for, or uses the Service in any capacity, including as a student or teacher.</p>
+          <p><strong>"Personal Data"</strong> means any information relating to an identified or identifiable natural person, as defined under applicable law including the Information Technology Act, 2000 (India) and the Digital Personal Data Protection Act, 2023 (DPDPA).</p>
+          <p><strong>"Processing"</strong> means any operation performed on Personal Data, including collection, storage, use, transmission, and deletion.</p>
+          <p><strong>"Firebase"</strong> means Google Firebase, a cloud platform provided by Google LLC, used as the Service's backend infrastructure for authentication, database, and messaging services.</p>
+          <p><strong>"IndexedDB / IDB"</strong> means the browser-native client-side database used for offline caching of Service data on the User's device.</p>
+        </div>
+      </div>
+
+      <div id="s2" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 15c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 2</div><div class="card-title">Data Controller Identity</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service is operated by an independent developer ("Operator"). The Operator acts as the Data Controller in respect of Personal Data collected through the Service. The Operator's contact information is available in Section 15 of this Policy.</p>
+          <p>The Operator is <strong>not</strong> affiliated with, endorsed by, or a subsidiary of Google LLC, Alphabet Inc., or any of their subsidiaries. Firebase and Google Sign-In are third-party services subject to Google's own privacy policies.</p>
+          <p>The Operator does not employ staff dedicated to data processing. All Personal Data is processed automatically by the technical infrastructure described herein, without manual review except where legally required.</p>
+        </div>
+      </div>
+
+      <div id="s3" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14V7l6-4 6 4v7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/></svg></div>
+          <div><div class="card-num">Section 3</div><div class="card-title">Data We Collect</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service collects the following categories of data:</p>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Data Category</th><th>Specific Items</th><th>Source</th><th>Nature</th></tr></thead>
+          <tbody>
+            <tr><td>Identity Data</td><td>Display name, email address, profile photo URL, Google UID</td><td>Google OAuth 2.0</td><td class="badge">Personal</td></tr>
+            <tr><td>Role Data</td><td>User role (student / teacher), subject list, class list</td><td>User input</td><td class="badge">Personal</td></tr>
+            <tr><td>Fee Records</td><td>Teacher names, fee amounts, payment dates, batch names, student names added by the User</td><td>User input</td><td class="badge">Personal</td></tr>
+            <tr><td>Payment History</td><td>Timestamps, amounts, payment type, partial balance</td><td>User input</td><td class="badge">Personal</td></tr>
+            <tr><td>Device Data</td><td>Stable device identifier (localStorage), browser locale, time zone (derived)</td><td>Browser API</td><td class="badge orange">Pseudonymous</td></tr>
+            <tr><td>Push Token</td><td>FCM device token for push notifications (if permission granted)</td><td>Firebase Messaging</td><td class="badge orange">Pseudonymous</td></tr>
+            <tr><td>Usage Metadata</td><td>Cache timestamps, sync timestamps, offline queue state</td><td>Service internals</td><td class="badge teal">Technical</td></tr>
+          </tbody>
+        </table>
+        <div class="prose">
+          <p>The Service does <strong>not</strong> collect: precise geolocation, biometric data, financial account numbers, government-issued identification, or any special categories of Personal Data as defined under applicable law.</p>
+          <p>Student names and fee data entered by a teacher-role User relate to third parties. The teacher-role User is solely responsible for obtaining any necessary consents from those third parties prior to entering their information into the Service.</p>
+        </div>
+      </div>
+
+      <div id="s4" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 5.5H17l-4.9 3.6 1.8 5.6L9 13.1l-4.9 3.6 1.8-5.6L1 7.5h6.2L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 4</div><div class="card-title">Legal Basis for Processing</div></div>
+        </div>
+        <div class="prose">
+          <p>Processing of Personal Data is carried out under the following legal bases:</p>
+          <p><strong>Contractual necessity (Article 6(1)(b) GDPR equivalent / DPDPA §4):</strong> Processing Identity Data, Role Data, Fee Records, and Payment History is necessary to perform the Service as agreed when the User creates an account.</p>
+          <p><strong>Legitimate interests:</strong> Processing Device Data and Usage Metadata is carried out on the basis of the Operator's legitimate interest in maintaining the security, reliability, and offline functionality of the Service. This interest is not overridden by the rights and freedoms of Users.</p>
+          <p><strong>Consent:</strong> Processing of Push Tokens and delivery of push notifications is based on the User's explicit, revocable consent granted through the browser's Notification Permission API. Withdrawal of consent can be effected at any time through the device or browser notification settings without affecting the lawfulness of prior processing.</p>
+        </div>
+      </div>
+
+      <div id="s5" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 5</div><div class="card-title">Purpose &amp; Use of Data</div></div>
+        </div>
+        <div class="prose">
+          <p>Personal Data is used exclusively for the following purposes and is not processed in any manner incompatible with those purposes:</p>
+          <p><strong>(a) Authentication:</strong> Verifying User identity via Google Sign-In to grant access to User-specific data.</p>
+          <p><strong>(b) Core Service functionality:</strong> Storing, retrieving, and displaying fee records, payment histories, and batch information as entered by the User.</p>
+          <p><strong>(c) Offline capability:</strong> Caching data to the User's device (IndexedDB, localStorage) so the Service remains functional without an active internet connection.</p>
+          <p><strong>(d) Notifications:</strong> Sending push notifications for fee due-date reminders and payment receipts, where notification permission has been granted.</p>
+          <p><strong>(e) Service integrity:</strong> Replaying offline write queues upon reconnection; detecting and resolving data synchronisation conflicts.</p>
+          <p>The Operator does not use Personal Data for: targeted advertising, profiling, automated decision-making with legal or similarly significant effects, sale or rental to third parties, or any purpose not listed above.</p>
+        </div>
+      </div>
+
+      <div id="s6" class="card">
+        <div class="card-header">
+          <div class="card-icon pink"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="3" cy="9" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="15" cy="9" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="15" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M9 13v-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 6</div><div class="card-title">Third-Party Sub-Processors</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service relies on the following third-party sub-processors. Personal Data may be transmitted to and processed by these entities as described:</p>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Sub-Processor</th><th>Purpose</th><th>Data Shared</th><th>Location</th></tr></thead>
+          <tbody>
+            <tr><td>Google Firebase<br><small style="color:var(--muted)">google.com</small></td><td>Authentication, Firestore database, Cloud Messaging</td><td>All Personal Data</td><td>Global (Google Cloud)</td></tr>
+            <tr><td>Google Fonts<br><small style="color:var(--muted)">fonts.googleapis.com</small></td><td>Web font delivery</td><td>IP address (transient)</td><td>Global CDN</td></tr>
+            <tr><td>Cloudflare<br><small style="color:var(--muted)">cdnjs.cloudflare.com</small></td><td>Chart.js &amp; SheetJS CDN</td><td>IP address (transient)</td><td>Global CDN</td></tr>
+          </tbody>
+        </table>
+        <div class="prose">
+          <p>Google Firebase processes Personal Data pursuant to Google's Data Processing Addendum and applicable contractual obligations. The Operator has no control over Google's internal data handling practices beyond the contractual terms accepted at the time of Firebase project creation.</p>
+          <p>The Operator is <em>not liable</em> for any breach, loss, disclosure, or misuse of Personal Data by any sub-processor, including Google Firebase, where such event occurs within the sub-processor's own infrastructure or is attributable to the sub-processor's acts or omissions.</p>
+          <p>No Personal Data is shared with analytics platforms, advertising networks, or social media trackers. There are no third-party tracking scripts of any kind embedded in the Service.</p>
+        </div>
+      </div>
+
+      <div id="s7" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 6h10M6 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M7 9v5M11 9v5M3 6l1 9a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 7</div><div class="card-title">Data Retention &amp; Deletion</div></div>
+        </div>
+        <div class="prose">
+          <p><strong>Active accounts:</strong> Personal Data is retained in Firestore for as long as the User maintains an active account with the Service.</p>
+          <p><strong>Account deletion:</strong> Users may request deletion of their account and all associated Personal Data by signing out and submitting a deletion request to the contact address in Section 15. The Operator shall effect deletion within 30 (thirty) days of a verifiable request. Deletion encompasses all Firestore documents under the User's UID path.</p>
+          <p><strong>Client-side data:</strong> Data cached in the User's browser (IndexedDB, localStorage, Service Worker cache) is purged automatically upon sign-out (Service Worker <code>CLEAR_CACHE</code> and <code>PURGE_QUEUE</code> messages are dispatched). Users may also clear this data manually via browser settings at any time.</p>
+          <p><strong>Push tokens:</strong> FCM device tokens stored in Firestore are deleted upon sign-out or upon revocation of notification permissions as detected by the Service.</p>
+          <p><strong>Backup and disaster recovery:</strong> Firebase may retain data in backup snapshots for a period governed by Google's own retention policies, beyond the Operator's control. The Operator does not independently operate backups of Firestore data.</p>
+        </div>
+      </div>
+
+      <div id="s8" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L3 5v5c0 3.5 2.5 6.3 6 7 3.5-.7 6-3.5 6-7V5L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.5 9l2 2 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 8</div><div class="card-title">Security Measures</div></div>
+        </div>
+        <div class="prose">
+          <p>The following technical and organisational measures are in place to protect Personal Data:</p>
+          <p><strong>Transport encryption:</strong> All data transmitted between the User's device and Firebase servers is encrypted using TLS 1.2 or higher.</p>
+          <p><strong>Firebase Security Rules:</strong> Firestore access is governed by Firebase Security Rules that restrict read and write operations to the authenticated owner of each data path (<code>/users/{uid}/</code>). No User can access another User's data through the Service's Firestore configuration.</p>
+          <p><strong>Firebase App Check:</strong> reCAPTCHA v3-based App Check is enforced to prevent abuse of Firebase resources by unauthorised clients.</p>
+          <p><strong>Authentication:</strong> User authentication is delegated entirely to Google's OAuth 2.0 infrastructure. The Service does not store passwords.</p>
+          <p><strong>Client-side isolation:</strong> Locally cached data is keyed by UID and is not accessible to other origins or browser tabs by virtue of the Same-Origin Policy.</p>
+          <p>Notwithstanding the foregoing, <em>no security measure is infallible.</em> The Operator cannot guarantee absolute security of data transmitted over public networks or stored in third-party infrastructure. The Operator is not liable for security incidents that originate within Firebase's or Google's infrastructure.</p>
+        </div>
+      </div>
+
+      <div id="s9" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 6h.01M8 9h1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 9</div><div class="card-title">User Rights</div></div>
+        </div>
+        <div class="prose">
+          <p>Subject to applicable law, Users have the following rights in respect of their Personal Data:</p>
+          <p><strong>Right of access:</strong> You may request a summary of Personal Data held about you. As the Service displays your data in real time through the application interface, most data is directly accessible without a formal request.</p>
+          <p><strong>Right to rectification:</strong> You may correct inaccurate Personal Data at any time through the in-app profile and data editing interfaces.</p>
+          <p><strong>Right to erasure ("right to be forgotten"):</strong> You may request deletion of your account and all associated data as described in Section 7.</p>
+          <p><strong>Right to data portability:</strong> The Service provides CSV and XLSX export functionality for payment history data, enabling data portability in machine-readable formats.</p>
+          <p><strong>Right to withdraw consent:</strong> Where processing is based on consent (push notifications), you may withdraw consent at any time through device or browser settings.</p>
+          <p><strong>Right to lodge a complaint:</strong> If you believe your data protection rights have been violated, you may lodge a complaint with the relevant data protection authority in your jurisdiction. For Users in India, this is the Data Protection Board of India established under the DPDPA 2023.</p>
+          <p>To exercise rights not addressable through the in-app interface, contact the Operator via the address in Section 15. The Operator will respond within 30 days. The Operator reserves the right to verify your identity before acting on a request.</p>
+        </div>
+      </div>
+
+      <div id="s10" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9a6 6 0 0 0 12 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3 9H1M17 9h-2M9 3V1M9 17v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 10</div><div class="card-title">Cookies &amp; Local Storage</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service does not use browser cookies for tracking or advertising purposes.</p>
+          <p>The Service uses the following browser storage mechanisms, all of which are strictly necessary for Service functionality:</p>
+          <p><strong>localStorage:</strong> Stores User UID (for offline boot), theme preference (<code>ft_theme</code>), and PWA installation state flags. No personal tracking data is stored in localStorage.</p>
+          <p><strong>IndexedDB (<code>fee-tracker-cache</code>):</strong> Stores a local cache of Firestore data (teachers, batches, payments, profile) to enable offline access. Data is keyed by UID and automatically cleared on sign-out.</p>
+          <p><strong>Service Worker cache storage:</strong> Stores application shell assets (HTML, CSS, JS, images) for offline PWA functionality. No Personal Data is stored in the Service Worker cache.</p>
+          <p>All client-side storage is automatically cleared on sign-out. Users may also clear all stored data at any time through their browser's storage management settings without affecting their Firestore data.</p>
+        </div>
+      </div>
+
+      <div id="s11" class="card">
+        <div class="card-header">
+          <div class="card-icon pink"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M2 16c0-3 3.1-5.5 7-5.5s7 2.5 7 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 11</div><div class="card-title">Children's Privacy</div></div>
+        </div>
+        <div class="prose">
+          <p>The Service is not directed at children under the age of 13 (or such higher age as applicable under local law). The Operator does not knowingly collect Personal Data from children under this age threshold.</p>
+          <p>Where a teacher-role User enters the name or other details of a student who is a minor, the teacher-role User warrants that they have obtained all necessary parental or guardian consents required by applicable law prior to doing so. The Operator bears no responsibility for data entered relating to minors by teacher-role Users.</p>
+          <p>If you are a parent or guardian and believe your child's data has been collected without appropriate consent, please contact the Operator via Section 15 to request deletion.</p>
+        </div>
+      </div>
+
+      <div id="s12" class="card">
+        <div class="card-header">
+          <div class="card-icon red"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L1.5 15h15L9 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13.5" r=".8" fill="currentColor"/></svg></div>
+          <div><div class="card-num">Section 12</div><div class="card-title">Limitation of Liability</div></div>
+        </div>
+        <div class="highlight-box orange">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13h13L8 2z" stroke="var(--accent4)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3" stroke="var(--accent4)" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".8" fill="var(--accent4)"/></svg>
+          <p>This section contains important limitations on the Operator's liability. Please read it carefully.</p>
+        </div>
+        <div class="prose">
+          <p>To the maximum extent permitted by applicable law:</p>
+          <p><strong>(a) No warranty:</strong> The Service is provided "as is" and "as available" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, accuracy, reliability, or non-infringement.</p>
+          <p><strong>(b) Data loss:</strong> The Operator shall not be liable for any loss, corruption, or unavailability of Personal Data or User-entered data arising from: Firebase infrastructure failures, network disruptions, browser storage limitations, device loss or failure, or any force majeure event.</p>
+          <p><strong>(c) Third-party breaches:</strong> The Operator shall not be liable for any data breach, unauthorised access, or disclosure of Personal Data that occurs within Google Firebase's or any other sub-processor's infrastructure.</p>
+          <p><strong>(d) Consequential damages:</strong> In no event shall the Operator be liable for any indirect, incidental, special, punitive, or consequential damages whatsoever, including but not limited to loss of profits, loss of data, business interruption, or reputational harm, even if advised of the possibility of such damages.</p>
+          <p><strong>(e) Aggregate cap:</strong> The Operator's total aggregate liability to any User under or in connection with this Policy, whether in contract, tort (including negligence), breach of statutory duty, or otherwise, shall not exceed ₹0 (zero rupees), as the Service is provided free of charge with no consideration exchanged.</p>
+          <p><strong>(f) User responsibility:</strong> The User is solely responsible for the accuracy, legality, and appropriateness of all data they enter into the Service, including third-party data (student names, fee amounts). The Operator assumes no responsibility for errors, omissions, or legal consequences arising from User-entered data.</p>
+        </div>
+      </div>
+
+      <div id="s13" class="card">
+        <div class="card-header">
+          <div class="card-icon purple"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M14 3H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z" stroke="currentColor" stroke-width="1.5"/><path d="M12 3V1M6 3V1M3 7h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 13</div><div class="card-title">Amendments</div></div>
+        </div>
+        <div class="prose">
+          <p>The Operator reserves the right to amend this Privacy Policy at any time. Material changes will be notified to active Users via an in-app notification or push notification where notification permission has been granted.</p>
+          <p>Continued use of the Service following the effective date of any amendment constitutes acceptance of the amended Policy. If you do not agree to any amendment, your sole remedy is to discontinue use of the Service and request deletion of your data per Section 7.</p>
+          <p>The version number and effective date at the top of this document identify the currently operative version.</p>
+        </div>
+      </div>
+
+      <div id="s14" class="card">
+        <div class="card-header">
+          <div class="card-icon orange"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l1.8 3.6L15 6.3l-3 2.9.7 4.2L9 11.3l-3.7 2.1.7-4.2L3 6.3l4.2-.7L9 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+          <div><div class="card-num">Section 14</div><div class="card-title">Governing Law &amp; Dispute Resolution</div></div>
+        </div>
+        <div class="prose">
+          <p>This Privacy Policy shall be governed by and construed in accordance with the laws of <strong>India</strong>, including the Information Technology Act, 2000, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011, and the Digital Personal Data Protection Act, 2023 (to the extent in force).</p>
+          <p>Any dispute arising out of or in connection with this Policy that cannot be resolved by direct negotiation shall be referred to arbitration in accordance with the Arbitration and Conciliation Act, 1996. The seat and venue of arbitration shall be determined by the Operator. The language of arbitration shall be English.</p>
+          <p>Nothing in this section prevents the Operator from seeking injunctive or other equitable relief from a court of competent jurisdiction where necessary to protect its legitimate interests.</p>
+        </div>
+      </div>
+
+      <div id="s15" class="card">
+        <div class="card-header">
+          <div class="card-icon teal"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7l7 4.5L16 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div><div class="card-num">Section 15</div><div class="card-title">Contact</div></div>
+        </div>
+        <div class="prose">
+          <p>For all privacy-related queries, data subject rights requests, or to report a data breach, contact the Operator through the Fee Tracker application's feedback mechanism or via the support channel published on the Service's hosting domain.</p>
+          <p>The Operator will endeavour to respond to all verifiable requests within <strong>30 (thirty) calendar days</strong>. Complex or voluminous requests may require additional time, in which case the Operator will notify you of the expected response timeline.</p>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        <p>This Privacy Policy was last updated on <strong>1 June 2025</strong>.</p>
+        <p style="margin-top:6px;">Fee Tracker · <a href="index.html">Home</a> · <a href="terms.html">Terms &amp; Conditions</a></p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
