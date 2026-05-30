@@ -1,7 +1,7 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      const reg = await navigator.serviceWorker.register('sw.js?v=10');
+      const reg = await navigator.serviceWorker.register('/sw.js?v=11');
 
       navigator.serviceWorker.addEventListener('message', e => {
         const { type, version } = e.data || {};

@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
          query, where,
-         enableIndexedDbPersistence }
+         initializeFirestore, persistentLocalCache, persistentMultipleTabManager }
+  // getFirestore kept as fallback inside _createFirestore
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -82,8 +83,15 @@ function _pickDb(uid) {
   return _dbShard(uid) === 0 ? _db1 : _db2;
 }
 
-function _enablePersistence(dbInstance) {
-  enableIndexedDbPersistence(dbInstance).catch(() => {});
+function _createFirestore(app) {
+  try {
+    return initializeFirestore(app, {
+      cache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch {
+    // fallback if already initialized
+    return getFirestore(app);
+  }
 }
 
 async function _initFirebase() {
@@ -101,12 +109,9 @@ async function _initFirebase() {
     });
   } catch {}
 
-  _db1 = getFirestore(_app1);
-  _db2 = _app2 ? getFirestore(_app2) : null;
+  _db1 = _createFirestore(_app1);
+  _db2 = _app2 ? _createFirestore(_app2) : null;
   db   = _db1;
-
-  _enablePersistence(_db1);
-  if (_db2) _enablePersistence(_db2);
 
   auth      = getAuth(_app1);
   VAPID_KEY = cfg.vapidKey;
@@ -240,13 +245,14 @@ const isT    = () => profile.role === 'teacher';
 // ── INDEXED-DB CACHE — permanent, per-account, survives mobile cache clears ──
 // DB is opened once per session; all reads/writes go through idbReady promise.
 const IDB_NAME  = 'fee-tracker-cache';
-const IDB_VER   = 2;   // bumped to add new stores
+const IDB_VER   = 3;   // matches sw.js IDB_VERSION
 const IDB_STORE = 'kv';
 
 const idbReady = new Promise((resolve, reject) => {
   const req = indexedDB.open(IDB_NAME, IDB_VER);
   req.onupgradeneeded = e => {
-    const db = e.target.result;
+    const db  = e.target.result;
+    const old = e.oldVersion;
     // Main kv store (exists from v1)
     if (!db.objectStoreNames.contains(IDB_STORE)) {
       db.createObjectStore(IDB_STORE);
@@ -254,6 +260,15 @@ const idbReady = new Promise((resolve, reject) => {
     // v2: dedicated batch-detail store keyed by uid__batchId
     if (!db.objectStoreNames.contains('batches_detail')) {
       db.createObjectStore('batches_detail');
+    }
+    // v3: SW queue and meta stores (created here so app and SW share the same DB)
+    if (old < 3) {
+      if (!db.objectStoreNames.contains('sw_queue')) {
+        const qs = db.createObjectStore('sw_queue', { keyPath: 'id', autoIncrement: true });
+        qs.createIndex('by_ts',  'ts');
+        qs.createIndex('by_uid', 'uid');
+      }
+      if (!db.objectStoreNames.contains('sw_meta')) db.createObjectStore('sw_meta');
     }
   };
   req.onsuccess = e => resolve(e.target.result);
