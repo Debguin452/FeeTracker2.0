@@ -35,7 +35,7 @@ const BYPASS_PATTERNS = [
   'gstatic.com/firebasejs',
 ];
 
-// API routes must always hit the network — never serve stale config or auth proxy from cache
+// Same-origin paths that must always hit the network — never serve stale config or auth proxy
 const API_BYPASS_PATHS = ['/api/', '/__/auth/'];
 
 const MAX_RUNTIME_ENTRIES = 80;
@@ -272,7 +272,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Always bypass SW for API routes and auth proxy — must not serve stale
+  // Never cache API config or auth proxy — always fetch live
   if (url.origin === self.location.origin && API_BYPASS_PATHS.some(p => url.pathname.startsWith(p))) {
     event.respondWith(fetch(request));
     return;
