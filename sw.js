@@ -35,8 +35,8 @@ const BYPASS_PATTERNS = [
   'gstatic.com/firebasejs',
 ];
 
-// Same-origin paths that must always hit the network — never serve stale config or auth proxy
-const API_BYPASS_PATHS = ['/api/', '/__/auth/'];
+// Same-origin paths that must always hit the network — never cache config or auth proxy
+const API_BYPASS = ['/api/', '/__/auth/'];
 
 const MAX_RUNTIME_ENTRIES = 80;
 const MAX_RUNTIME_AGE_MS  = 7 * 24 * 60 * 60 * 1000;
@@ -272,8 +272,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Never cache API config or auth proxy — always fetch live
-  if (url.origin === self.location.origin && API_BYPASS_PATHS.some(p => url.pathname.startsWith(p))) {
+  if (url.origin === self.location.origin && API_BYPASS.some(p => url.pathname.startsWith(p))) {
     event.respondWith(fetch(request));
     return;
   }

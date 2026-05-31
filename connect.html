@@ -328,43 +328,38 @@
     updateDoc, deleteDoc, query, where, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // ── Config + Firebase init with error handling ──────────────────────
   let auth, db;
   try {
     const _cfgRes = await fetch('/api/config');
-    if (!_cfgRes.ok) throw new Error('HTTP ' + _cfgRes.status);
+    if (!_cfgRes.ok) throw new Error('Config ' + _cfgRes.status);
     const _cfgData = await _cfgRes.json();
-    const cfg = _cfgData.firebase.primary;
-    const _app = initializeApp(cfg);
+    const _app = initializeApp(_cfgData.firebase.primary);
     try {
-      initializeAppCheck(_app, {
-        provider: new ReCaptchaV3Provider(_cfgData.recaptchaSiteKey),
-        isTokenAutoRefreshEnabled: true
-      });
+      initializeAppCheck(_app, { provider: new ReCaptchaV3Provider(_cfgData.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
     } catch {}
     auth = getAuth(_app);
     db   = getFirestore(_app);
-  } catch (_initErr) {
-    console.error('[Connect] Init failed:', _initErr);
+  } catch (_e) {
+    console.error('[Connect] Init failed:', _e);
     const _ls = document.getElementById('loadingScreen');
     if (_ls) {
-      _ls.innerHTML =
-        '<div style="text-align:center;padding:40px 24px;">' +
-          '<div style="width:52px;height:52px;border-radius:18px;overflow:hidden;margin:0 auto 16px;">' +
-            '<img src="icons/icon-512.png" style="width:52px;height:52px;display:block;object-fit:cover;">' +
-          '</div>' +
-          '<div style="font-size:15px;font-weight:700;color:#ff4d6d;margin-bottom:8px;">Could not load configuration</div>' +
-          '<div style="font-size:13px;color:var(--muted,#8a8ab5);margin-bottom:20px;line-height:1.6;">' +
-            'Check your internet connection and try again.' +
-          '</div>' +
-          '<button onclick="location.reload()" ' +
-            'style="padding:12px 28px;border-radius:14px;background:var(--accent,#7c6bff);' +
-            'color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;">' +
-            'Retry' +
-          '</button>' +
-        '</div>';
+      const _errEl = document.createElement('div');
+      _errEl.style.cssText = 'text-align:center;padding:40px 24px;';
+      _errEl.innerHTML =
+        '<div style="width:52px;height:52px;border-radius:18px;overflow:hidden;margin:0 auto 16px;">' +
+          '<img src="icons/icon-512.png" style="width:52px;height:52px;display:block;object-fit:cover;">' +
+        '</div>' +
+        '<div style="font-size:15px;font-weight:700;color:#ff4d6d;margin-bottom:8px;">Could not load configuration</div>' +
+        '<div style="font-size:13px;color:var(--muted,#8a8ab5);margin-bottom:20px;line-height:1.6;">' +
+          'Check your connection and reload.' +
+        '</div>' +
+        '<button onclick="location.reload()" ' +
+          'style="padding:12px 28px;border-radius:14px;background:var(--accent,#7c6bff);color:#fff;' +
+          'border:none;font-size:14px;font-weight:700;cursor:pointer;">Reload</button>';
+      _ls.innerHTML = '';
+      _ls.appendChild(_errEl);
     }
-    throw _initErr;
+    throw _e;
   }
 
   const profilesCol   = () => collection(db, 'profiles');
