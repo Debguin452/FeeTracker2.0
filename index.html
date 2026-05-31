@@ -28,19 +28,9 @@
   <meta name="twitter:description" content="Track tuition fees effortlessly. Works offline, PWA ready.">
   <meta name="twitter:image" content="https://fee.tracker1.workers.dev/icons/preview.png">
   <link rel="canonical" href="https://fee.tracker1.workers.dev/">
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://fcmregistrations.googleapis.com">
-  <link rel="preload" href="css/app.css" as="style">
-  <link rel="modulepreload" href="js/app.js">
-  <link rel="preload" href="js/pwa.js" as="script">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
   <link rel="stylesheet" href="css/app.css">
   <script src="js/theme.js"></script>
 </head>
@@ -49,7 +39,7 @@
   <div class="blob blob2"></div>
   <div class="blob blob3"></div>
 
-  <!-- ── DESKTOP SIDEBAR (960px+ only, hidden on mobile/login) ── -->
+  
   <nav id="desktopSidebar" style="display:none;">
     <div class="sb-logo">
       <img src="icons/icon-512.png" alt="Fee Tracker" style="width:36px;height:36px;border-radius:12px;flex-shrink:0;object-fit:cover;box-shadow:0 4px 14px rgba(124,107,255,.35);">
@@ -85,14 +75,14 @@
       Profile
     </button>
 
-    <!-- Desktop profile info card at bottom -->
+    
     <div class="sb-user" id="sbUserCard">
       <div class="sb-user-av" id="sbUserAv">?</div>
       <div class="sb-user-info">
         <div class="sb-user-name" id="sbUserName">Loading…</div>
         <div class="sb-user-email" id="sbUserEmail" style="font-size:9px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
       </div>
-      <!-- Three-dot menu -->
+      
       <div style="position:relative;">
         <button id="sbUserMenuBtn" onclick="event.stopPropagation();sbToggleUserMenu()" style="width:28px;height:28px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="3" r="1.2" fill="currentColor"/><circle cx="7" cy="7" r="1.2" fill="currentColor"/><circle cx="7" cy="11" r="1.2" fill="currentColor"/></svg>
@@ -111,11 +101,11 @@
     </div>
   </nav>
 
-  <!-- ONBOARDING — 3-step wizard, first login only -->
+  
   <div id="onboardScreen" class="hidden">
     <div class="ob-inner">
 
-      <!-- Step 1: Role selection -->
+      
       <div id="obStep1">
         <div class="ob-greeting">Hi there!</div>
         <div class="ob-sub">Tell us who you are to personalise Fee Tracker for you.</div>
@@ -134,11 +124,11 @@
             <div class="ob-role-desc">Manage batches, students &amp; collect fees</div>
           </div>
         </div>
-        <!-- Next only shows after role selected -->
+        
         <button class="ob-continue-btn" id="obNextBtn1" onclick="obNext(1)" style="display:none;">Next &rarr;</button>
       </div>
 
-      <!-- Step 2: Name -->
+      
       <div id="obStep2" class="hidden">
         <div class="ob-section-label" style="margin-top:0;">Your Name</div>
         <input class="ob-name-input" id="obName" type="text"
@@ -146,7 +136,7 @@
         <button class="ob-continue-btn" id="obNextBtn2" onclick="obNext(2)" style="display:none;">Next &rarr;</button>
       </div>
 
-      <!-- Step 3A: Student — class -->
+      
       <div id="obStudentFields" class="hidden">
         <div class="ob-section-label">Your Class / Grade</div>
         <div class="ob-chips-grid">
@@ -164,7 +154,7 @@
         <button class="ob-continue-btn" id="obDoneBtn" onclick="obSubmit()" style="display:none;">Get Started →</button>
       </div>
 
-      <!-- Step 3B: Teacher — subjects + classes + session -->
+      
       <div id="obTeacherFields" class="hidden">
         <div class="ob-section-label">Subjects You Teach</div>
         <div class="ob-subj-tags" id="obSubjTags"></div>
@@ -196,11 +186,11 @@
     </div>
   </div>
 
-    <!-- LOGIN -->
-  <!-- LOGIN -->
-  <!-- SPLASH SKELETON — shown immediately while Firebase auth resolves -->
+    
+  
+  
   <div id="authOverlay">
-    <div class="auth-logo"><div style="width:52px;height:52px;border-radius:17px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 6px 24px rgba(124,107,255,.2);"><span style="font-size:28px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;">₹</span></div></div>
+    <div class="auth-logo"><div style="width:52px;height:52px;border-radius:17px;overflow:hidden;box-shadow:0 6px 24px rgba(124,107,255,.2);display:flex;align-items:center;justify-content:center;"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:52px;height:52px;display:block;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=&quot;font-size:28px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;&quot;>₹</span>'"></div></div>
     <div class="auth-ring"></div>
     <div class="auth-ring-label">Fee Tracker</div>
   </div>
@@ -211,27 +201,27 @@
       <div style="flex:1;padding:0 12px;">
         <div class="topbar-title" id="splashTitle" style="opacity:.85;">Fee Tracker</div>
       </div>
-      <!-- Right buttons: analytics + add (mirrors real topbar-right) -->
+      
       <div style="display:flex;gap:8px;flex-shrink:0;">
         <div class="sk" style="width:40px;height:40px;border-radius:14px;"></div>
         <div class="sk" style="width:40px;height:40px;border-radius:16px;"></div>
       </div>
     </div>
     <div class="splash-body">
-      <!-- Hero / total card block -->
+      
       <div class="sk-hero"><div class="sk-hero-inner"><div>
         <div class="sk-hero-label"></div><div class="sk-hero-amount"></div><div class="sk-hero-sub"></div>
       </div><div class="sk-hero-pills">
         <div class="sk-hero-pill"></div><div class="sk-hero-pill"></div><div class="sk-hero-pill"></div>
       </div></div></div>
-      <!-- Search bar block -->
+      
       <div class="sk" style="width:100%;height:48px;border-radius:16px;margin-bottom:18px;"></div>
-      <!-- Section label row -->
+      
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div class="sk" style="width:68px;height:8px;border-radius:5px;opacity:.45;"></div>
         <div class="sk" style="width:22px;height:14px;border-radius:7px;opacity:.3;"></div>
       </div>
-      <!-- Card 1 — full opacity -->
+      
       <div class="sk-tc" style="padding:14px 16px;margin-bottom:10px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;min-width:0;">
@@ -245,7 +235,7 @@
           </div>
         </div>
       </div>
-      <!-- Card 2 — dimmed -->
+      
       <div class="sk-tc" style="padding:14px 16px;margin-bottom:10px;opacity:.55;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;min-width:0;">
@@ -258,7 +248,7 @@
           </div>
         </div>
       </div>
-      <!-- Card 3 — very dim -->
+      
       <div class="sk-tc" style="padding:14px 16px;opacity:.22;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
           <div style="flex:1;min-width:0;">
@@ -274,7 +264,7 @@
   </div>
 
   <div class="screen hidden" id="loginScreen">
-    <!-- LOGIN SKELETON — shown while firebase initialises -->
+    
     <div id="loginSkeleton">
       <div class="sk-login-glyph"></div>
       <div class="sk" style="width:160px;height:28px;border-radius:8px;margin-top:14px;"></div>
@@ -285,9 +275,9 @@
       <div class="sk" style="width:140px;height:7px;border-radius:4px;opacity:.14;margin-top:5px;"></div>
     </div>
 
-    <!-- REAL CONTENT — fades in after skeleton -->
+    
     <div id="loginContent" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 28px;width:100%;max-width:420px;opacity:0;transition:opacity .5s ease;pointer-events:none;position:relative;z-index:1;">
-      <div class="login-glyph"><div style="width:80px;height:80px;border-radius:26px;background:linear-gradient(135deg,rgba(124,107,255,.22),rgba(255,107,157,.15));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(124,107,255,.3);box-shadow:0 8px 32px rgba(124,107,255,.2);"><span style="font-size:46px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;display:block;">₹</span></div></div>
+      <div class="login-glyph"><div style="width:80px;height:80px;border-radius:26px;overflow:hidden;box-shadow:0 8px 32px rgba(124,107,255,.2);display:flex;align-items:center;justify-content:center;"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:80px;height:80px;display:block;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=&quot;font-size:46px;line-height:1;background:linear-gradient(140deg,#ffffff 0%,#c8baff 50%,#ff8fb8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;display:block;&quot;>₹</span>'"></div></div>
       <div class="login-name">Fee Tracker</div>
       <div class="login-sub">Smart &middot; Simple &middot; Personal</div>
       <div id="loginOfflineNotice" style="display:none;align-items:center;gap:6px;background:rgba(255,154,60,.12);border:1px solid rgba(255,154,60,.3);border-radius:10px;padding:8px 14px;margin-top:12px;font-size:12px;color:var(--accent4);"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L1 12h12L7 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="11" r=".7" fill="currentColor"/></svg>Offline — sign in needs connection</div>
@@ -301,11 +291,10 @@
         Continue with Google
       </button>
       <p class="login-note"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="display:inline-block;vertical-align:middle;margin-right:4px;opacity:.7"><rect x="2" y="5.5" width="8" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Your data is private. Works for students tracking fees and teachers managing batches.</p>
-      <p class="login-note" style="margin-top:14px;">By continuing, you agree to our <a href="terms.html" style="color:rgba(255,255,255,.45);text-underline-offset:3px;">Terms</a> and <a href="privacy.html" style="color:rgba(255,255,255,.45);text-underline-offset:3px;">Privacy Policy</a>.</p>
     </div>
   </div>
 
-  <!-- APP -->
+  
 
 
   <div class="screen hidden" id="appScreen">
@@ -323,16 +312,16 @@
       </div>
     </div>
     <div class="app-inner" id="appInner">
-      <!-- Skeleton: hero card -->
+      
       <div class="sk sk-total-card"></div>
-      <!-- Skeleton: search bar -->
+      
       <div class="sk sk-mb16" style="height:48px;border-radius:16px;opacity:.8;"></div>
-      <!-- Skeleton: section label -->
+      
       <div class="sk-section-row sk-mb12">
         <div class="sk" style="width:64px;height:8px;border-radius:4px;opacity:.4;"></div>
         <div class="sk sk-pill" style="width:22px;height:14px;opacity:.3;"></div>
       </div>
-      <!-- Skeleton cards: 3 teacher/batch cards, fading -->
+      
       <div class="sk-tc">
         <div class="sk-tc-body">
           <div style="flex:1;padding-right:12px;">
@@ -390,7 +379,7 @@
   </div>
 
 
-  <!-- HISTORY SCREEN -->
+  
   <div class="hidden" id="historyScreen">
     <div class="hist-topbar">
       <button class="hist-back" onclick="closeHistoryScreen()">
@@ -408,10 +397,10 @@
     </div>
   </div>
 
-  <!-- MENU BACKDROP -->
+  
   <div class="menu-backdrop hidden" id="menuBackdrop"></div>
 
-  <!-- USER MENU -->
+  
   <div class="user-menu hidden" id="userMenu">
     <div class="menu-user-section">
       <div class="menu-avatar" id="menuAvatar" onclick="closeMenu();setTimeout(openProfileModal,80);" style="cursor:pointer;" title="Edit profile">?</div>
@@ -469,7 +458,7 @@
     </div>
   </div>
 
-  <!-- PROFILE MODAL -->
+  
   <div class="modal-overlay hidden" id="profileModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -479,7 +468,7 @@
       </div>
       <div id="roleSwitchNote" class="hidden" style="background:rgba(255,154,60,.08);border:1px solid rgba(255,154,60,.22);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--accent4);line-height:1.5;">&#x26A0;&#xFE0F; Switching roles will reload your dashboard.</div>
 
-      <!-- Avatar — tappable to focus name field -->
+      
       <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:22px;">
         <div style="position:relative;width:76px;height:76px;cursor:pointer;" onclick="document.getElementById('profileName')?.focus()">
           <div style="width:76px;height:76px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 24px rgba(124,107,255,.4);">
@@ -492,7 +481,7 @@
         <div style="font-size:12px;color:var(--muted);letter-spacing:.4px;font-weight:500;">Tap to edit profile</div>
       </div>
 
-      <!-- Role -->
+      
       <div style="margin-bottom:18px;">
         <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;">I am a…</div>
         <div class="role-toggle">
@@ -509,13 +498,13 @@
         </div>
       </div>
 
-      <!-- Name -->
+      
       <div class="field-group">
         <label>Your Name</label>
         <input class="field-input" id="profileName" type="text" placeholder="e.g. Debaguin" maxlength="40" autocomplete="name">
       </div>
 
-      <!-- Student fields -->
+      
       <div id="studentFields">
         <div class="field-group">
           <label>Class / Grade / Year</label>
@@ -534,7 +523,7 @@
         </div>
       </div>
 
-      <!-- Teacher fields -->
+      
       <div id="teacherFields" class="hidden">
         <div class="field-group">
           <label>Subjects You Teach</label>
@@ -571,7 +560,7 @@
         </div>
       </div>
 
-      <!-- Theme Toggle -->
+      
       <div class="theme-toggle-row" id="themeToggleRow" onclick="toggleTheme()">
         <div class="theme-toggle-left">
           <div class="theme-toggle-icon" id="themeToggleIcon"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div>
@@ -590,7 +579,7 @@
   </div>
 
 
-  <!-- SELECTION ACTION BAR -->
+  
   <div class="sel-bar hidden" id="selBar">
     <button class="sel-bar-close" id="selBarClose" style="display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     <div class="sel-bar-count"><span id="selCount">0</span> selected</div>
@@ -598,7 +587,7 @@
     <button class="sel-bar-btn danger" id="selDeleteBtn"><span class="sbi" style="display:flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M6 4V2h4v2M5 4l1 9h4l1-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Delete</span></button>
   </div>
 
-  <!-- ASSIGN TO BATCH MODAL (teacher role) -->
+  
   <div class="modal-overlay hidden" id="assignBatchModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -617,7 +606,7 @@
     </div>
   </div>
 
-  <!-- TEACHER ADD CHOICE SHEET -->
+  
   <div class="modal-overlay hidden" id="teacherAddChoiceSheet">
     <div class="modal-sheet" style="padding-bottom:36px;">
       <div class="modal-handle"></div>
@@ -648,7 +637,7 @@
     </div>
   </div>
 
-  <!-- ADD STANDALONE STUDENT MODAL (teacher role, no batch) -->
+  
   <div class="modal-overlay hidden" id="addStandaloneStudentModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -687,7 +676,7 @@
   </div>
 
 
-  <!-- EDIT TEACHER MODAL (student role) -->
+  
   <div class="modal-overlay hidden" id="editTeacherModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -719,7 +708,7 @@
     </div>
   </div>
 
-  <!-- EDIT STANDALONE STUDENT MODAL -->
+  
   <div class="modal-overlay hidden" id="editStandaloneStudentModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -751,7 +740,7 @@
     </div>
   </div>
 
-  <!-- ADD MODAL -->
+  
   <div class="modal-overlay hidden" id="addModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -759,7 +748,7 @@
         <div class="modal-title" id="addModalTitle">Add Teacher</div>
       </div>
 
-      <!-- Student: add teacher -->
+      
       <div id="addStudentFields">
         <div class="field-group">
           <label>Teacher Name</label>
@@ -780,7 +769,7 @@
         </div>
       </div>
 
-      <!-- Teacher: add batch -->
+      
       <div id="addTeacherFields" class="hidden">
         <div class="field-group">
           <label>Batch Name</label>
@@ -817,7 +806,7 @@
     </div>
   </div>
 
-  <!-- BATCH DETAIL SCREEN -->
+  
   <div id="batchDetailScreen" class="hidden">
     <div class="bd-topbar">
       <button class="bd-back" onclick="closeBatchDetail()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -830,7 +819,7 @@
     <div class="bd-body" id="bdBody"></div>
   </div>
 
-  <!-- ADD STUDENT MODAL -->
+  
   <div class="modal-overlay hidden" id="addStudentModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -877,7 +866,7 @@
     </div>
   </div>
 
-  <!-- EDIT STUDENT MODAL -->
+  
   <div class="modal-overlay hidden" id="editStudentModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -916,7 +905,7 @@
     </div>
   </div>
 
-  <!-- CONFIRM -->
+  
   <div class="confirm-overlay hidden" id="confirmOverlay">
     <div class="confirm-box">
       <div class="confirm-icon" id="confirmIcon" style="display:flex;align-items:center;justify-content:center;margin-bottom:16px;"><svg width="40" height="40" viewBox="0 0 16 16" fill="none"><path d="M7 2L0.5 13h13L7 2z" stroke="var(--yellow)" stroke-width="1.4" stroke-linejoin="round"/><line x1="7" y1="6.5" x2="7" y2="9.5" stroke="var(--yellow)" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="11.2" r=".7" fill="var(--yellow)"/></svg></div>
@@ -930,7 +919,7 @@
   </div>
 
 
-  <!-- TEACHER DETAIL SHEET -->
+  
   <div class="modal-overlay hidden" id="teacherDetailSheet">
     <div class="modal-sheet" id="teacherDetailSheetInner" style="padding-bottom:max(52px,calc(32px + env(safe-area-inset-bottom)));">
       <div class="modal-handle" id="teacherDetailHandle"></div>
@@ -977,7 +966,7 @@
 
 
 
-  <!-- TEACHER ANALYTICS DASHBOARD -->
+  
   <div id="teacherDashScreen" class="dash-screen hidden">
     <div class="dash-topbar">
       <button class="bd-back" onclick="window.closeTeacherDash&&window.closeTeacherDash()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -992,7 +981,7 @@
     </div>
   </div>
 
-  <!-- STUDENT ANALYTICS DASHBOARD -->
+  
   <div id="studentDashScreen" class="dash-screen hidden">
     <div class="dash-topbar">
       <button class="bd-back" onclick="window.closeStudentDash&&window.closeStudentDash()" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -1007,7 +996,7 @@
     </div>
   </div>
 
-  <!-- NOTIFICATION PERMISSION BANNER -->
+  
   <div id="notifBanner" style="
     position:fixed; bottom:0; left:0; right:0; z-index:550;
     padding:0 14px 14px; transform:translateY(100%);
@@ -1046,7 +1035,7 @@
     </div>
   </div>
 
-  <!-- PWA INSTALL BANNER -->
+  
   <div class="pwa-banner hidden" id="pwaBanner">
     <div class="pwa-banner-inner">
       <div class="pwa-banner-top">
@@ -1064,7 +1053,7 @@
     </div>
   </div>
 
-  <!-- PWA INSTALL BANNER -->
+  
   <div id="installBanner">
     <div class="install-sheet">
       <div class="install-handle"></div>

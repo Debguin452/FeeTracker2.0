@@ -180,21 +180,21 @@
 
     /* ── LOADING SCREEN ── */
     #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
-    .load-logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#5240e0);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;}
+    .load-logo{width:52px;height:52px;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
     .load-txt{font-size:13px;color:var(--muted);}
   </style>
 </head>
 <body>
 
 <div id="loadingScreen">
-  <div class="load-logo">₹</div>
+  <div class="load-logo"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:52px;height:52px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:22px;font-weight:800;color:#fff';this.outerHTML='₹'"></div>
   <div class="spinner" style="margin:0;width:24px;height:24px;border-width:2.5px;"></div>
   <div class="load-txt">Loading…</div>
 </div>
 
 <!-- LOGIN GATE -->
 <div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;">
-  <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--accent),#5240e0);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff;margin-bottom:8px;">₹</div>
+  <div style="width:64px;height:64px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:64px;height:64px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:26px;font-weight:800;color:#fff';this.outerHTML='₹'"></div>
   <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);text-align:center;">Sign in to Connect</div>
   <div style="font-size:14px;color:var(--muted);text-align:center;line-height:1.6;">You need to be signed in to Fee Tracker to use Connect.</div>
   <button onclick="window.location.href='index.html'" style="background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;">Go to Fee Tracker</button>
@@ -328,28 +328,23 @@
     updateDoc, deleteDoc, query, where, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const _cfgRes = await fetch('/api/config', { credentials: 'same-origin' });
+  const _cfgRes = await fetch('/api/config');
   const _cfgData = await _cfgRes.json();
-  const cfg = { ..._cfgData.firebase.primary, authDomain: 'feetracker2.pages.dev' };
+  const cfg = _cfgData.firebase.primary;
 
   const _app = initializeApp(cfg);
   try {
-    initializeAppCheck(_app, {
-      provider: new ReCaptchaV3Provider(_cfgData.recaptchaSiteKey),
-      isTokenAutoRefreshEnabled: true
-    });
-  } catch(e){ console.warn('[AppCheck]', e.message); }
+    initializeAppCheck(_app, { provider: new ReCaptchaV3Provider(_cfgData.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
+  } catch {}
 
   const auth = getAuth(_app);
   const db   = getFirestore(_app);
 
-  // ── Collections ──
   const profilesCol   = () => collection(db, 'profiles');
   const profileDoc    = uid  => doc(db, 'profiles', uid);
   const connectionsCol = ()  => collection(db, 'connections');
   const connDoc       = id   => doc(db, 'connections', id);
 
-  // ── State ──
   const _cmap={'en-IN':'INR','en-US':'USD','en-GB':'GBP','en-AU':'AUD','en-CA':'CAD','en-SG':'SGD','ja-JP':'JPY','ko-KR':'KRW','zh-CN':'CNY','de-DE':'EUR','fr-FR':'EUR','hi-IN':'INR','bn-IN':'INR','ar-SA':'SAR','ar-AE':'AED','pt-BR':'BRL','es-MX':'MXN','tr-TR':'TRY','ru-RU':'RUB'};
   const _ul=navigator.language||'en-IN';
   const _uc=_cmap[_ul]||_cmap[Object.keys(_cmap).find(k=>k.startsWith(_ul.split('-')[0]+'-'))||'']||'INR';
@@ -358,7 +353,6 @@
   let cu = null, myProfile = null, allTeachers = [], myConnections = [];
   let _toastTimer = null;
 
-  // ── Toast ──
   function toast(msg, type=''){
     const t = document.getElementById('toast');
     if(_toastTimer){ clearTimeout(_toastTimer); t.classList.remove('show'); void t.offsetWidth; }
@@ -371,12 +365,10 @@
   function show(id){ const el=document.getElementById(id); if(el) el.classList.remove('hidden'); }
   function setHTML(id,h){ const el=document.getElementById(id); if(el) el.innerHTML=h; }
 
-  // ── Colour for avatars ──
   const COLORS = ['#7c6bff','#ff6b9d','#00d4aa','#ff9a3c','#5a9eff','#c084fc'];
   function avatarColor(name){ let h=0; for(let c of name) h=(h<<5)-h+c.charCodeAt(0); return COLORS[Math.abs(h)%COLORS.length]; }
   function initials(name){ return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 
-  // ── Time ago ──
   function timeAgo(ts){
     if(!ts) return '';
     const s = Math.floor((Date.now()-(ts.toMillis ? ts.toMillis() : ts))/1000);
@@ -386,16 +378,12 @@
     return Math.floor(s/86400)+'d ago';
   }
 
-  // ── Generate 6-char alphanumeric code ──
-
-  // ── Apply saved theme ──
   (function(){
     const saved=localStorage.getItem('ft_theme');
     const dark = saved ? saved==='dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
     if(!dark) document.documentElement.classList.add('light');
   })();
 
-  // ── Auth — consistent with index.html browserLocalPersistence ──
   const _cachedUid = localStorage.getItem('ft_uid');
   let _settled = false;
   setPersistence(auth, browserLocalPersistence).catch(()=>{});
@@ -408,7 +396,6 @@
       try { localStorage.setItem('ft_uid', user.uid); } catch(e) {}
       await boot();
     } else {
-      // Firebase fired null — if we had a session, redirect back rather than show login gate
       if (_cachedUid) { window.location.href = 'index.html'; return; }
       hide('loadingScreen');
       const lg = document.getElementById('loginGate');
@@ -417,7 +404,6 @@
     }
   });
 
-  // Failsafe: Firebase slow (offline/slow network) — redirect if had session
   setTimeout(() => {
     if (_settled) return;
     _settled = true;
@@ -451,8 +437,6 @@
     }
   }
 
-  // ═══════════════════════════ STUDENT ═══════════════════════════
-
   async function bootStudent(){
     await Promise.all([loadAllTeachers(), loadMyConnections()]);
     renderTeacherList();
@@ -473,7 +457,6 @@
     } catch(e){ console.warn('conns:', e.message); myConnections=[]; }
   }
 
-  // Expose for search input
   window.filterTeachers = function(){
     renderTeacherList();
   };
@@ -530,7 +513,6 @@
     }).join(''));
   }
 
-  // In-flight write lock for connect.html (mirrors index.html pattern)
   const _cWriteLocks = {};
   async function _cWriteLock(key) {
     while (_cWriteLocks[key]) { await new Promise(r => setTimeout(r, 80)); }
@@ -546,11 +528,9 @@
   }
 
   window.sendRequest = async function(teacherId, teacherName){
-    // Rate-limit: one request attempt per teacher per 5 seconds
     if (!_cCooldown('req_'+teacherId, 5000)) { toast('Please wait…', ''); return; }
     const release = await _cWriteLock('req_'+teacherId);
     const connId = cu.uid + '_' + teacherId;
-    // Check if already exists
     const existing = myConnections.find(c=>c.teacherId===teacherId);
     if(existing){ release(); toast('Request already sent',''); return; }
     try {
@@ -606,10 +586,7 @@
     document.getElementById('myConnPaneWrap').style.display  = !isBrowse ? '' : 'none';
   };
 
-  // ═══════════════════════════ TEACHER ═══════════════════════════
-
   async function bootTeacher(){
-    // Check for public profile in /profiles/{uid}
     try {
       const snap = await getDoc(profileDoc(cu.uid));
       if(snap.exists()){
@@ -716,7 +693,7 @@
   }
 
   window.acceptRequest = async function(connId, studentId, studentName){
-    if (!_cCooldown('accept_'+connId, 3000)) return; // prevent double-tap
+    if (!_cCooldown('accept_'+connId, 3000)) return;
     const release = await _cWriteLock('accept_'+connId);
     try {
       await updateDoc(connDoc(connId), { status:'active', acceptedAt: serverTimestamp() });
@@ -729,7 +706,7 @@
   };
 
   window.declineRequest = async function(connId){
-    if (!_cCooldown('decline_'+connId, 3000)) return; // prevent double-tap
+    if (!_cCooldown('decline_'+connId, 3000)) return;
     const release = await _cWriteLock('decline_'+connId);
     try {
       await deleteDoc(connDoc(connId));
@@ -765,16 +742,13 @@
     } catch(e){ console.warn('conn students:', e.message); }
   }
 
-  // ── Profile setup (create / edit) ──
   let _editMode = false;
-  // Preset chip values (built into HTML)
   const PRESET_CHIPS = ['Cls 9','Cls 10','Cls 11','Cls 12','1st Yr','2nd Yr','3rd Yr','Grad'];
 
   window.addCustomBatch = function(){
     const input = document.getElementById('batchInput');
     const val = (input.value||'').trim();
     if(!val) return;
-    // Avoid duplicates
     const existing = [...document.querySelectorAll('#setupClassChips .chip')].map(c=>c.dataset.val);
     if(existing.includes(val)){ toast('Batch already added',''); input.value=''; return; }
     const chip = document.createElement('div');
@@ -789,9 +763,7 @@
 
   window.openProfileSetup = async function(edit=false){
     _editMode = edit;
-    // Clear any previously added custom chips (keep only presets)
     document.querySelectorAll('#setupClassChips .chip.removable').forEach(c=>c.remove());
-    // Reset preset selection
     document.querySelectorAll('#setupClassChips .chip').forEach(ch=>ch.classList.remove('selected'));
 
     if(edit){
@@ -804,11 +776,9 @@
           document.getElementById('setupFee').value = p.fee||'';
           document.getElementById('setupSession').value = p.session||'';
           const saved = p.classes||[];
-          // Mark presets
           document.querySelectorAll('#setupClassChips .chip').forEach(ch=>{
             ch.classList.toggle('selected', saved.includes(ch.dataset.val));
           });
-          // Re-add custom batches
           saved.filter(c=>!PRESET_CHIPS.includes(c)).forEach(val=>{
             const chip = document.createElement('div');
             chip.className = 'chip selected removable';
@@ -863,7 +833,6 @@
     btn.textContent='Save Profile'; btn.disabled=false;
   };
 
-  // ── Handle incoming ?join= link (uses already-resolved cu, no extra auth listener) ──
   async function handleJoinLink(){
     const joinTeacherId = new URLSearchParams(location.search).get('join');
     if(!joinTeacherId || !cu || joinTeacherId === cu.uid) return;
@@ -877,7 +846,6 @@
     } catch(e){}
   }
 
-  // Close modal on backdrop tap
   document.getElementById('profileSetupModal').addEventListener('click', function(e){
     if(e.target === this) this.classList.add('hidden');
   });
