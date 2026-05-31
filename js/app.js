@@ -9,23 +9,32 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRe
 import { getMessaging, getToken, onMessage }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
+let _cfg = null;
+async function _getConfig() {
+  if (_cfg) return _cfg;
+  try { const c = localStorage.getItem('ft_cfg'); if (c) { _cfg = JSON.parse(c); _refreshConfig(); return _cfg; } } catch {}
+  const r = await fetch('/api/config');
+  if (!r.ok) throw new Error('Config fetch failed: ' + r.status);
+  _cfg = await r.json();
+  try { localStorage.setItem('ft_cfg', JSON.stringify(_cfg)); } catch {}
+  return _cfg;
+}
+function _refreshConfig() {
+  fetch('/api/config').then(r => r.ok ? r.json() : null).then(d => { if (d) { _cfg = d; try { localStorage.setItem('ft_cfg', JSON.stringify(d)); } catch {} } }).catch(() => {});
+}
+const _cfgPromise = _getConfig();
 
-// ── SW hydration: data injected by service worker into the page ──────────
-// When reloading offline the SW splices window.__SW_HYDRATE__ into the HTML
-// so we have data synchronously before IDB or Firebase resolves.
 (function applySWHydration() {
   try {
     const h = window.__SW_HYDRATE__;
     if (!h || typeof h !== 'object') return;
-    // Extract uid prefix (all keys share the same uid)
+    
     const firstKey = Object.keys(h)[0] || '';
     const uid = firstKey.split('__')[0] || '';
     if (!uid) return;
 
-    // Pre-populate localStorage ft_uid so offline boot finds it instantly
     try { if (!localStorage.getItem('ft_uid')) localStorage.setItem('ft_uid', uid); } catch {}
 
-    // Store hydration payload so loadFromCacheAsync can use it as fallback
     window.__SW_HYDRATE_UID__ = uid;
     window.__SW_HYDRATE_MAP__ = {};
     Object.entries(h).forEach(([k, entry]) => {
@@ -39,25 +48,16 @@ import { getMessaging, getToken, onMessage }
   }
 })();
 
-let _app1, _app2, _db1, _db2, auth, messaging, VAPID_KEY;
-let db = null;
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: 'select_account' });
+const cfg = await _cfgPromise;
+const _app1 = initializeApp(cfg.firebase.primary, 'primary');
+const _app2 = cfg.firebase.secondary ? initializeApp(cfg.firebase.secondary, 'secondary') : null;
 
-let _configCache = null;
+try {
+  initializeAppCheck(_app1, { provider: new ReCaptchaV3Provider(cfg.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
+} catch {}
 
-async function _fetchConfig() {
-  if (_configCache) return _configCache;
-  const cached = sessionStorage.getItem('ft_cfg');
-  if (cached) {
-    try { _configCache = JSON.parse(cached); return _configCache; } catch {}
-  }
-  const res = await fetch('/api/config', { credentials: 'same-origin' });
-  if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
-  _configCache = await res.json();
-  try { sessionStorage.setItem('ft_cfg', JSON.stringify(_configCache)); } catch {}
-  return _configCache;
-}
+const _db1 = getFirestore(_app1);
+const _db2 = _app2 ? getFirestore(_app2) : null;
 
 function _dbShard(uid) {
   let h = 0;
@@ -69,63 +69,28 @@ function _pickDb(uid) {
   return _dbShard(uid) === 0 ? _db1 : _db2;
 }
 
+let db = _db1;
+
+const auth = getAuth(_app1);
+const provider = new GoogleAuthProvider();
+
 function _enablePersistence(dbInstance) {
-  enableIndexedDbPersistence(dbInstance).catch(() => {});
-}
-
-async function _initFirebase() {
-  const cfg = await _fetchConfig();
-  const c1  = cfg.firebase.primary;
-  const c2  = cfg.firebase.secondary;
-
-  _app1 = initializeApp(c1, 'primary');
-  _app2 = c2 ? initializeApp(c2, 'secondary') : null;
-
-  try {
-    initializeAppCheck(_app1, {
-      provider: new ReCaptchaV3Provider(cfg.recaptchaSiteKey),
-      isTokenAutoRefreshEnabled: true,
-    });
-  } catch {}
-
-  _db1 = getFirestore(_app1);
-  _db2 = _app2 ? getFirestore(_app2) : null;
-  db   = _db1;
-
-  _enablePersistence(_db1);
-  if (_db2) _enablePersistence(_db2);
-
-  auth      = getAuth(_app1);
-  VAPID_KEY = cfg.vapidKey;
-
-  try { messaging = getMessaging(_app1); } catch {}
-
-  await setPersistence(auth, browserLocalPersistence).catch(() => {});
-
-  const r = await getRedirectResult(auth).catch(e => {
-    if (e.code && e.code !== 'auth/no-current-user') toast('Login error: ' + e.code, 'error');
-    return null;
-  });
-  if (r?.user) await bootApp(r.user);
-
-  onAuthStateChanged(auth, async user => {
-    if (user) {
-      if (!loaded) await bootApp(user);
-    } else {
-      _handleSignedOut();
-    }
+  enableIndexedDbPersistence(dbInstance).catch(e => {
+    if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn('[Firestore]', e.code);
   });
 }
+_enablePersistence(_db1);
+if (_db2) _enablePersistence(_db2);
 
-// STATE
+let messaging = null;
+try { messaging = getMessaging(_app1); } catch {}
+
+const VAPID_KEY = cfg.vapidKey;
+provider.setCustomParameters({ prompt:'select_account' });
+
 let cu = null, teachers = {}, batches = {}, payments = [], searchQ = '', profile = {};
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ════════════════════════════════════════════════════
-// RATE-LIMITER & DEBOUNCE UTILITIES
-// ════════════════════════════════════════════════════
-
-// Simple debounce — returns a function that delays invoking fn until after wait ms
 function _debounce(fn, wait) {
   let timer;
   return function(...args) {
@@ -134,8 +99,6 @@ function _debounce(fn, wait) {
   };
 }
 
-// Cooldown guard — returns true if the action is allowed, false if still cooling down
-// usage: if (!_cooldown('pullRefresh', 30000)) return;
 const _cooldowns = {};
 function _cooldown(key, ms) {
   const now = Date.now();
@@ -144,8 +107,6 @@ function _cooldown(key, ms) {
   return true;
 }
 
-// In-flight write lock — prevents double-submission of async operations
-// Usage: const release = await _writeLock('payTeacher_<id>'); try { ... } finally { release(); }
 const _writeLocks = {};
 async function _writeLock(key) {
   while (_writeLocks[key]) {
@@ -155,8 +116,7 @@ async function _writeLock(key) {
   return () => { delete _writeLocks[key]; };
 }
 
-// ── Connect-notif TTL ─────────────────────────────
-const _CONNECT_NOTIF_TTL = 60 * 1000; // 1 minute
+const _CONNECT_NOTIF_TTL = 60 * 1000; 
 let _connectNotifTs = 0;
 
 const _currencyMap = {
@@ -195,10 +155,8 @@ function _applyCurSymbol(){
 document.addEventListener('DOMContentLoaded',_applyCurSymbol);
 window._applyCurSymbol=_applyCurSymbol;
 
-// REFS
 const uid    = () => cu.uid;
-// Separate stable UID for cache keys — persists even before cu is set
-// Stored to localStorage on first auth so offline reads work correctly
+
 function getCacheUid(){
   return (cu && cu.uid) || localStorage.getItem('ft_uid') || 'anon';
 }
@@ -211,21 +169,19 @@ const pyDoc  = id => doc(db,'users',uid(),'payments',id);
 const prRef  = () => doc(db,'users',uid(),'meta','profile');
 const isT    = () => profile.role === 'teacher';
 
-// ── INDEXED-DB CACHE — permanent, per-account, survives mobile cache clears ──
-// DB is opened once per session; all reads/writes go through idbReady promise.
 const IDB_NAME  = 'fee-tracker-cache';
-const IDB_VER   = 2;   // bumped to add new stores
+const IDB_VER   = 2;   
 const IDB_STORE = 'kv';
 
 const idbReady = new Promise((resolve, reject) => {
   const req = indexedDB.open(IDB_NAME, IDB_VER);
   req.onupgradeneeded = e => {
     const db = e.target.result;
-    // Main kv store (exists from v1)
+    
     if (!db.objectStoreNames.contains(IDB_STORE)) {
       db.createObjectStore(IDB_STORE);
     }
-    // v2: dedicated batch-detail store keyed by uid__batchId
+    
     if (!db.objectStoreNames.contains('batches_detail')) {
       db.createObjectStore('batches_detail');
     }
@@ -271,29 +227,27 @@ async function idbDel(k, store=IDB_STORE){
   } catch(e){}
 }
 
-// Save/load batch detail (students + payments) keyed by batch ID
 function saveBatchDetailToCache(bid){
   if(!bid) return;
   idbSet(bid, { students: batchStudents, payments: batchPayments }, 'batches_detail');
-  // Record when this batch's detail was last fetched from Firestore
+  
   try { idbSet('_batchDetailTs_'+bid, Date.now()); } catch(e){}
 }
 async function loadBatchDetailFromCache(bid){
   const d = await idbGet(bid, 'batches_detail');
-  return d || null; // { students, payments } or null
+  return d || null; 
 }
-// Bust per-batch + main sync timestamps after any write inside a batch
+
 function _invalidateBatchCache(bid){
   try { idbSet('_batchDetailTs_'+bid, null); idbSet('_lastSyncTs', null); } catch(e){}
 }
 
-// Sync reads for boot (fallback to localStorage for first-run migration)
 const LS = {
   get: (k) => { try { const v=localStorage.getItem(`ft__${getCacheUid()}__${k}`); return v?JSON.parse(v):null; } catch{ return null; } },
 };
 
 function loadFromCache(){
-  // Synchronous: load from localStorage (migration source) if IDB not ready yet
+  
   const ct=LS.get('teachers'); if(ct) teachers=ct;
   const cp=LS.get('payments'); if(cp) payments=cp;
   const cb=LS.get('batches');  if(cb) batches=cb;
@@ -301,7 +255,7 @@ function loadFromCache(){
 }
 
 async function loadFromCacheAsync(){
-  // Priority order: IDB → SW hydration map → localStorage
+  
   const swm = window.__SW_HYDRATE_MAP__ || {};
   const [ct,cp,cb,cpr,css] = await Promise.all([
     idbGet('teachers'), idbGet('payments'), idbGet('batches'),
@@ -328,31 +282,30 @@ async function loadFromCacheAsync(){
 }
 
 function saveToCache(){
-  // Fire-and-forget async writes — never block UI
+  
   idbSet('teachers', teachers);
   idbSet('payments', payments);
   idbSet('batches',  batches);
   if(_standaloneStudents && _standaloneStudents.length >= 0) {
     idbSet('standalone_students', _standaloneStudents);
   }
-  // Also keep LS in sync for migration compatibility
+  
   try { localStorage.setItem(`ft__${getCacheUid()}__teachers`, JSON.stringify(teachers)); } catch(e){}
   try { localStorage.setItem(`ft__${getCacheUid()}__payments`, JSON.stringify(payments)); } catch(e){}
   try { localStorage.setItem(`ft__${getCacheUid()}__batches`,  JSON.stringify(batches));  } catch(e){}
-  // Mirror data bundle to SW for offline HTML injection
+  
   _swMirror();
-  // Update home screen widget with latest totals
+  
   _updateWidget();
 }
 
-// Push latest summary to SW so the home-screen widget stays current
 function _updateWidget(){
   try {
     const sw = navigator.serviceWorker?.controller;
     if(!sw) return;
     const n = new Date();
     const due = isT()
-      ? null  // teacher: no single "total due" concept
+      ? null  
       : totalDue();
     const pending = isT()
       ? null
@@ -377,7 +330,7 @@ function _updateWidget(){
 function saveProfileToCache(p){
   idbSet('profile', p);
   try { localStorage.setItem(`ft__${getCacheUid()}__profile`, JSON.stringify(p)); } catch(e){}
-  // Mirror profile to SW too
+  
   const uid = getCacheUid();
   if(uid && uid !== 'anon') {
     navigator.serviceWorker?.controller?.postMessage({
@@ -386,7 +339,6 @@ function saveProfileToCache(p){
   }
 }
 
-// Send full data bundle to SW for offline HTML injection
 function _swMirror(){
   try {
     const uid = getCacheUid();
@@ -401,7 +353,7 @@ function _swMirror(){
 }
 
 function showOfflineBanner(show){
-  // Never show the banner if the device is actually online
+  
   if(show && navigator.onLine) return;
   let b=document.getElementById('offlineBanner');
   if(!b){ b=document.createElement('div'); b.id='offlineBanner';
@@ -409,9 +361,7 @@ function showOfflineBanner(show){
     b.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:middle;margin-right:5px;flex-shrink:0"><path d="M1 1l14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10.6 7.4A6 6 0 0 1 13 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M3.2 9A6 6 0 0 1 5.7 7.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M6 11a3 3 0 0 1 4 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="14" r="1.2" fill="currentColor"/></svg> Offline — cached data'; b.style.cursor='default'; document.body.appendChild(b); }
   b.style.transform=show?'translateY(0)':'translateY(-100%)';
 }
-// ──────────────────────────────────────────────────────────────────────────
 
-// ── Network status ──────────────────────────────────────────────────────
 window.addEventListener('online', async () => {
   _onlineSince=Date.now();
   showOfflineBanner(false);
@@ -419,8 +369,7 @@ window.addEventListener('online', async () => {
   navigator.serviceWorker?.controller?.postMessage({ type: 'ONLINE' });
 
   if (loaded && profile.role) {
-    // Re-sync Firestore data — this also pulls back any queued offline payments
-    // with their real Firestore IDs replacing the temporary local_* IDs
+    
     const hadLocalPays = (payments||[]).some(p => p.id?.startsWith('local_'));
     toast(hadLocalPays ? 'Back online — uploading payments…' : 'Back online — syncing…', 'success');
     await loadAll(true);
@@ -439,14 +388,12 @@ window.addEventListener('online', async () => {
 window.addEventListener('offline', ()=>{
   showOfflineBanner(true);
 });
-// Set initial state
+
 if(!navigator.onLine){ const _cbi=document.getElementById('menuConnectBtn'); if(_cbi) _cbi.style.display='none'; showOfflineBanner(true); }
 
-// UTILS
 function mBetween(a,b){ return (b.year-a.year)*12+(b.month-a.month); }
 function addM(b,n){ let m=b.month+n,y=b.year; while(m>12){m-=12;y++;} return {month:m,year:y}; }
 
-// TOAST
 let _toastTimer=null;
 function toast(msg,type=''){
   const t=document.getElementById('toast');
@@ -456,7 +403,6 @@ function toast(msg,type=''){
   _toastTimer=setTimeout(()=>{ t.classList.remove('show'); _toastTimer=null; },2800);
 }
 
-// CONFIRM
 let _confirmResolve = null;
 function _confirmDone(v){
   document.getElementById('confirmOverlay').classList.add('hidden');
@@ -467,7 +413,7 @@ document.getElementById('confirmCancelBtn').addEventListener('click', ()=>_confi
 document.getElementById('confirmOverlay').addEventListener('click', e=>{
   if(e.target===document.getElementById('confirmOverlay')) _confirmDone(false);
 });
-// Confirm-dialog icon constants
+
 const _CI = {
   warn : `<svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="17" fill="rgba(255,154,60,.12)" stroke="rgba(255,154,60,.35)" stroke-width="1.5"/><path d="M18 10L8 27h20L18 10z" fill="rgba(255,154,60,.15)" stroke="#ff9a3c" stroke-width="1.8" stroke-linejoin="round"/><line x1="18" y1="17" x2="18" y2="22" stroke="#ff9a3c" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="25" r="1.2" fill="#ff9a3c"/></svg>`,
   del  : `<svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="17" fill="rgba(255,77,109,.12)" stroke="rgba(255,77,109,.35)" stroke-width="1.5"/><path d="M11 13h14M15 13v-2h6v2M14 13l1 12h6l1-12" stroke="#ff4d6d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -479,7 +425,7 @@ const _CI = {
 
     function confirm2(title,msg,ok='Confirm',icon=_CI.warn){
   return new Promise(res=>{
-    if(_confirmResolve) _confirmResolve(false); // cancel any pending
+    if(_confirmResolve) _confirmResolve(false); 
     _confirmResolve=res;
     document.getElementById('confirmIcon').innerHTML=icon;
     document.getElementById('confirmTitle').textContent=title;
@@ -489,7 +435,6 @@ const _CI = {
   });
 }
 
-// DUE CALC
 function lastPaid(id){
   const t=teachers[id];
   const _now=new Date(),_prev=new Date(_now.getFullYear(),_now.getMonth()-1,1);
@@ -513,7 +458,7 @@ function partialBal(id){
 function monthsDue(id){
   const n=new Date(), lp=lastPaid(id);
   let m=mBetween(lp,{month:n.getMonth()+1,year:n.getFullYear()});
-  // Day-aware: if today < payment day of month, that month isn't due yet
+  
   if(m>0 && n.getDate()<(lp.day||1)) m--;
   return Math.max(m,0);
 }
@@ -530,15 +475,10 @@ function lastPaidStr(id){
   const p=tp[0]; return p.paidOn?`${p.paidOn.day} ${MONTHS[p.paidOn.month-1]} ${p.paidOn.year}`:null;
 }
 
-// ═══════════════════════════════════════════════════
-//  NOTIFICATIONS — FCM + local push system
-// ═══════════════════════════════════════════════════
-
-// ── Generate a stable per-device ID (stored in localStorage) ──
 function getDeviceId() {
   let id = localStorage.getItem('ft_device_id');
   if (!id) {
-    // Crypto random 16-byte hex string — unique per browser profile
+    
     id = Array.from(crypto.getRandomValues(new Uint8Array(16)))
            .map(b => b.toString(16).padStart(2,'0')).join('');
     localStorage.setItem('ft_device_id', id);
@@ -546,16 +486,11 @@ function getDeviceId() {
   return id;
 }
 
-// ── FCM Token Management ──────────────────────────────────────────────────
-// Strategy: one token per device per user. Create on first use; never overwrite.
-// On every boot we check if this device has a token — if not, create one.
-// This ensures ALL users who granted permission have a stored FCM token.
-
 async function saveFCMToken(token) {
   if (!uid() || !token) return;
   const deviceId = getDeviceId();
   try {
-    // Write-once: only save if no token exists for this device yet
+    
     const existing = await getDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId));
     if (existing.exists()) {
       console.log('[FCM] Token already stored for this device');
@@ -611,23 +546,21 @@ async function saveFCMToken(token) {
   } catch(e) { console.warn('[FCM] Token save failed:', e); }
 }
 
-// Called on every boot — ensures this device has a token if permission is granted.
-// Also creates tokens for existing users who granted permission before FCM was added.
 async function refreshFCMTokenIfNeeded() {
   if (!messaging || !uid()) return;
-  // Only proceed if notifications are granted AND reminders not suppressed locally
+  
   if (Notification.permission !== 'granted') return;
   try {
     const deviceId = getDeviceId();
-    // Check Firestore first — if token exists, cache it locally and return
+    
     const existing = await getDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId));
     if (existing.exists()) {
       if (!localStorage.getItem('ft_fcm_token')) {
         localStorage.setItem('ft_fcm_token', existing.data().token);
       }
-      return; // already have a token
+      return; 
     }
-    // No token in Firestore for this device — generate and save one
+    
     const sw    = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
     if (!token) { console.warn('[FCM] getToken returned empty'); return; }
@@ -637,14 +570,12 @@ async function refreshFCMTokenIfNeeded() {
   } catch(e) { console.warn('[FCM] Token refresh failed:', e); }
 }
 
-
 async function removeFCMToken() {
   if (!uid()) return;
   const deviceId = getDeviceId();
   try { await deleteDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId)); } catch(e) {}
 }
 
-// Build the notification body based on how many teachers have dues
 function buildReminderBody(dueTeachers) {
   const count = dueTeachers.length;
   const total = dueTeachers.reduce((s, id) => s + calcDue(id), 0);
@@ -653,20 +584,19 @@ function buildReminderBody(dueTeachers) {
   if (count === 0) return null;
 
   if (count === 1) {
-    // Single teacher — show full name + months + amount
+    
     const t  = teachers[dueTeachers[0]];
     const mo = monthsDue(dueTeachers[0]);
     return `${t.name} — ${mo} month${mo>1?'s':''} due (${_fmt2(calcDue(dueTeachers[0]))})`;
   }
 
   if (count === 2) {
-    // Two teachers — show both first names + total
+    
     const n1 = teachers[dueTeachers[0]].name.split(' ')[0];
     const n2 = teachers[dueTeachers[1]].name.split(' ')[0];
     return `${n1} & ${n2} — ${_fmt2(total)} total due`;
   }
 
-  // 3 or more — show count + total, no individual names
   return `${count} teachers — ${_fmt2(total)} total outstanding`;
 }
 
@@ -677,7 +607,6 @@ async function initNotifications() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') { updateNotifMenuLabel(); return; }
 
-    // Use refreshFCMTokenIfNeeded — it handles write-once and creates tokens for all users
     await refreshFCMTokenIfNeeded();
 
     updateNotifMenuLabel();
@@ -685,9 +614,6 @@ async function initNotifications() {
   } catch(e) { console.warn('[Notif] Init failed:', e); }
 }
 
-// Fire a due-reminder notification if conditions are met.
-// Fires on days 1–5 of the month (baseline+1mo window), respects 25-day cooldown.
-// Student role: checks teachers[]. Teacher role: reads IDB-cached batch data.
 async function checkDueReminder(force = false) {
   if (Notification.permission !== 'granted') return;
 
@@ -697,7 +623,7 @@ async function checkDueReminder(force = false) {
 
   if (!force) {
     if (daysSince < 25) return;
-    // Only fire in the first 5 days of the month (the baseline+1 window)
+    
     if (today.getDate() > 5) return;
   }
 
@@ -705,11 +631,11 @@ async function checkDueReminder(force = false) {
   let body = null;
 
   if (!isT()) {
-    // ── Student role: check teachers ──
+    
     const dueTeachers = Object.keys(teachers).filter(id => monthsDue(id) > 0);
     body = buildReminderBody(dueTeachers);
   } else {
-    // ── Teacher role: tally due students from IDB-cached batch details ──
+    
     const curM = today.getMonth()+1, curY = today.getFullYear();
     let dueCount = 0, dueNames = [];
     for (const bid of Object.keys(batches)) {
@@ -733,7 +659,7 @@ async function checkDueReminder(force = false) {
         });
       } catch(e){}
     }
-    // Also count standalone students
+    
     (_standaloneStudents||[]).forEach(s => {
       const fee = s.fee||0; if(!fee) return;
       const _np2 = new Date(today.getFullYear(), today.getMonth()-1, 1);
@@ -767,21 +693,20 @@ function showNotifPrompt() {
   if (banner) setTimeout(() => banner.classList.add('show'), 2000);
 }
 
-// PROFILE
 async function loadProfile(){
-  // IDB profile already loaded by loadFromCacheAsync(); use it if available
+  
   if(!profile.role){
     const cached = await idbGet('profile') || LS.get('profile');
     if(cached){ profile=cached; updateRole(); }
   }
-  // ── TTL gate — skip Firestore getDoc if profile was synced recently ──
+  
   try {
     const profileTs = await idbGet('_profileSyncTs');
     if (profile.role && profileTs && (Date.now() - profileTs) < 10 * 60 * 1000) {
       updateRole();
-      return; // cache is fresh, no read needed
+      return; 
     }
-  } catch(e) { /* proceed */ }
+  } catch(e) {  }
   try{
     const s=await getDoc(prRef());
     if(s.exists()){
@@ -811,7 +736,7 @@ function renderSubjTags(){
 function renderClassTags(){
   document.getElementById('classTagsDisplay').innerHTML=
     pClasses.map((c,i)=>`<div class="subject-tag" style="background:rgba(0,212,170,.12);border-color:rgba(0,212,170,.25);color:var(--accent3);">${c}<button class="subj-rm" onclick="rmClass(${i})"><svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`).join('');
-  // sync chip selected states
+  
   document.querySelectorAll('#teacherFields .chip[data-val]').forEach(ch=>{
     ch.classList.toggle('selected', pClasses.includes(ch.dataset.val));
   });
@@ -868,7 +793,7 @@ function openProfileModal(){
   if(cu?.photoURL) av.innerHTML=`<img src="${cu.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
   else av.textContent=(profile.displayName||cu?.displayName||'U')[0].toUpperCase();
   document.getElementById('profileModal').classList.remove('hidden');
-  // Sync theme toggle to current state
+  
   if (typeof window._refreshThemeUI === 'function') window._refreshThemeUI();
 }
 function closeProfileModal(){ closeModal('profileModal'); }
@@ -882,7 +807,7 @@ async function saveProfile(){
   try{
     const roleChanged = profile.role !== d.role;
     await setDoc(prRef(),d); profile=d; saveProfileToCache(d);
-    // Invalidate caches so next loadAll/loadProfile fetches fresh from Firestore
+    
     try { await idbSet('_profileSyncTs', null); await idbSet('_lastSyncTs', null); } catch(e){}
     updateRole();
     closeProfileModal(); toast('Profile saved','success');
@@ -892,11 +817,10 @@ async function saveProfile(){
   btn.textContent='Save Profile'; btn.disabled=false;
 }
 
-// LOAD
 function showAppSkeleton(){
   if(appRendered) return;
   const root=document.getElementById('appInner');
-  // Student card skeleton — exact replica of .sk-tc structure
+  
   const studentCards=`
     <div class="sk-tc">
       <div class="sk-tc-body">
@@ -952,7 +876,7 @@ function showAppSkeleton(){
         </div>
       </div>
     </div>`;
-  // Teacher batch card skeleton
+  
   const batchCards=`
     <div class="sk-tc" style="padding:16px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
@@ -982,20 +906,16 @@ function showAppSkeleton(){
     ${isT()?batchCards:studentCards}`;
 }
 
-// Track whether real content has ever been rendered — prevents skeleton flash on re-loads
 let appRendered = false;
 
-// ── How long (ms) a successful Firestore sync is considered "fresh" ──────
-// Within this window, app reloads and re-focuses skip the round-trip entirely.
-const _SYNC_TTL = 5 * 60 * 1000; // 5 minutes
+const _SYNC_TTL = 5 * 60 * 1000; 
 
 async function loadAll(silent=false, force=false){
-  // Always render whatever we have immediately (cache or empty state)
+  
   if (!appRendered) {
-    render(); // instant render from cache (or empty state)
+    render(); 
   }
 
-  // ── Staleness gate — skip Firestore fetch if cache is fresh enough ───
   if (!force) {
     try {
       const lastSync = await idbGet('_lastSyncTs');
@@ -1005,17 +925,15 @@ async function loadAll(silent=false, force=false){
         appRendered = true;
         return;
       }
-    } catch(e) { /* IDB unavailable — proceed with fetch */ }
+    } catch(e) {  }
   }
 
-  // Snapshot data before fetch so we can diff
   const _prevTeachers = JSON.stringify(teachers);
   const _prevBatches  = JSON.stringify(batches);
   const _prevPayments = JSON.stringify(payments);
-  // Also snapshot batch metadata so we can skip pre-caching unchanged batches
+  
   const _prevBatchMeta = JSON.parse(_prevBatches || '{}');
 
-  // Sync Firestore — never touch the DOM until data arrives
   let fetchOk = false;
   try {
     if(isT()){
@@ -1027,22 +945,18 @@ async function loadAll(silent=false, force=false){
       payments=ps.docs.map(d=>({id:d.id,...d.data()}));
     }
     saveToCache();
-    // ── Record successful sync timestamp ──
+    
     try { await idbSet('_lastSyncTs', Date.now()); } catch(e){}
     showOfflineBanner(false); fetchOk=true;
   } catch(e){ console.warn('Firestore sync failed, using cache:',e); if(!navigator.onLine) showOfflineBanner(true); }
 
-
-  // ── Pre-cache batch details — only for batches that actually changed ──
-  // Skips fetching students/payments for batches whose metadata hasn't changed
-  // and that already have a detail cache entry. This saves N×2 reads on typical reloads.
   if(isT() && fetchOk && Object.keys(batches).length > 0){
     Promise.all(Object.keys(batches).map(async bid => {
       try{
         const batchUnchanged = JSON.stringify(batches[bid]) === JSON.stringify(_prevBatchMeta[bid]);
         const cachedDetail   = await idbGet(bid, 'batches_detail').catch(()=>null);
         if (batchUnchanged && cachedDetail) {
-          return; // already up to date — skip the 2 reads
+          return; 
         }
         const [sSnap,pSnap] = await Promise.all([getDocs(stuCol(bid)),getDocs(bpyCol(bid))]);
         const studs={}, pays=[];
@@ -1055,8 +969,6 @@ async function loadAll(silent=false, force=false){
 
   if(isT()) { try { await loadStandaloneStudents(); } catch(e){} }
 
-  // Only re-render if data actually changed — avoids the visible "reload flash"
-  // when Firestore returns the same data we already had from cache
   const dataChanged = fetchOk && (
     JSON.stringify(teachers) !== _prevTeachers ||
     JSON.stringify(batches)  !== _prevBatches  ||
@@ -1069,8 +981,6 @@ async function loadAll(silent=false, force=false){
   }
 }
 
-
-// PAY
 window.switchPayTab=function(id,type){
   const tb=document.getElementById(`ptab-${type}-${id}`); if(tb?.disabled) return;
   ['full','partial','advance'].forEach(t=>{
@@ -1094,7 +1004,7 @@ window.payMonths=async function(id,type='full'){
     if(!navigator.onLine){
       newPay.id='local_'+Date.now(); payments.push(newPay); saveToCache();
       toast(`Paid ${fmt(amt)} ✓ (queued — will sync online)`,'success');
-      // Fire-and-forget: Firestore SDK will sync when back online
+      
       addDoc(pyCol(),newPay).catch(()=>{});
     } else {
       const fref=await addDoc(pyCol(),newPay); newPay.id=fref.id; payments.push(newPay); saveToCache();
@@ -1177,14 +1087,13 @@ window.deleteBatch=async function(id){
   } catch(e) { toast('Error: '+e.message,'error'); }
 };
 
-// ADD
 function openAddModal(){
   if(isT()){
-    // Teacher role — show choice: Add Batch or Add Student
+    
     document.getElementById('teacherAddChoiceSheet').classList.remove('hidden');
     return;
   }
-  // Student role — open Add Teacher directly
+  
   document.getElementById('addModalTitle').textContent='Add Teacher';
   document.getElementById('addStudentFields').classList.remove('hidden');
   document.getElementById('addTeacherFields').classList.add('hidden');
@@ -1195,7 +1104,7 @@ function openAddModal(){
 }
 function openAddBatchModal(){
   document.getElementById('teacherAddChoiceSheet').classList.add('hidden');
-  // Force correct panels regardless of prior modal state
+  
   document.getElementById('addStudentFields').classList.add('hidden');
   document.getElementById('addTeacherFields').classList.remove('hidden');
   document.getElementById('addModalTitle').textContent = 'Add Batch';
@@ -1208,13 +1117,13 @@ function closeAddModal(){
   closeModal('addModal');
   ['f-name','f-subject','f-fee','f-lastpaid','b-name','b-subject','b-class','b-session','b-fee','b-timing']
     .forEach(i=>{ const e=document.getElementById(i); if(e) e.value=''; });
-  // Reset panels so next open starts clean
+  
   document.getElementById('addStudentFields')?.classList.remove('hidden');
   document.getElementById('addTeacherFields')?.classList.add('hidden');
 }
 async function confirmAdd(){
   const btn = document.getElementById('confirmAddBtn');
-  if (btn.disabled) return; // prevent double-tap
+  if (btn.disabled) return; 
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
   if(isT()){
@@ -1252,10 +1161,9 @@ window.toggleHistory=function(id){
   document.getElementById('tog-'+id).classList.toggle('open');
 };
 
-// ── Connect badge: red dot + pending student info for teachers ──
 async function _refreshConnectNotif() {
   if (!isT()) return;
-  // TTL gate — skip if checked within last 60 seconds
+  
   if (!_cooldown('connectNotif', _CONNECT_NOTIF_TTL)) return;
   try {
     const dot = document.getElementById('connectIconWrap');
@@ -1288,7 +1196,6 @@ async function _refreshConnectNotif() {
 }
 window._refreshConnectNotif = _refreshConnectNotif;
 
-// SWIPE
 let sx=0;
 window.startSwipe=(e,el)=>{
   sx=e.touches[0].clientX;
@@ -1301,7 +1208,7 @@ window.moveSwipe=(e,el)=>{
     el.style.transform=`translateX(${Math.max(d,-el.offsetWidth)}px)`;
     const pct=Math.min(Math.abs(d)/100,1);
     el.style.background=`rgba(255,77,109,${pct*0.35})`;
-    // Show delete icon hint at 80px+
+    
     if(!el._delHint){
       el._delHint=document.createElement('div');
       el._delHint.textContent='✕';
@@ -1326,7 +1233,6 @@ window.endSwipe=(el,id)=>{
   }
 };
 
-// PULL TO REFRESH — only fires when scroll container is at the very top
 let py=0,pu=false;
 const pi=document.getElementById('pull-indicator');
 const _appScr=document.getElementById('appScreen');
@@ -1364,7 +1270,6 @@ document.addEventListener('touchend',async e=>{
   }
 },{passive:true});
 
-// Immediate state update, debounced DOM render (150ms) — stops re-rendering on every keystroke
 const _renderCardsDebounced = _debounce(function(cursorPos) {
   renderCards();
   const inp2 = document.querySelector('.search-input');
@@ -1381,15 +1286,9 @@ window.onSearch = function(v) {
   _renderCardsDebounced(cursorPos);
 };
 
-// MENU
 function toggleMenu(e){ e?.stopPropagation(); const m=document.getElementById('userMenu'),b=document.getElementById('menuBackdrop'),isHidden=m.classList.contains('hidden'); if(isHidden){ m.style.animation='none'; m.classList.remove('hidden'); void m.offsetWidth; m.style.animation=''; b.classList.remove('hidden'); updateMenuThemeLabel(); } else { m.classList.add('hidden'); b.classList.add('hidden'); } }
 function closeMenu(){ document.getElementById('userMenu').classList.add('hidden'); document.getElementById('menuBackdrop').classList.add('hidden'); }
 
-// ═══════════════════════════════════════════════════════════
-// TRANSITION HELPERS
-// ═══════════════════════════════════════════════════════════
-
-// Navigate: exit current screen left, enter next screen right
 function screenTo(showId, hideId, direction='right') {
   const show = document.getElementById(showId);
   const hide = document.getElementById(hideId);
@@ -1397,18 +1296,16 @@ function screenTo(showId, hideId, direction='right') {
 
   const xSign = direction === 'right' ? 1 : -1;
 
-  // Exit: slide out current screen
   hide.style.transition   = 'opacity .22s ease, transform .22s cubic-bezier(.4,0,.6,1)';
   hide.style.transform    = `translateX(${xSign * -32}px)`;
   hide.style.opacity      = '0';
   hide.style.pointerEvents = 'none';
 
-  // Enter: prepare new screen off-stage
   show.classList.remove('hidden');
   show.style.transition = '';
   show.style.transform  = `translateX(${xSign * 32}px)`;
   show.style.opacity    = '0';
-  void show.offsetHeight; // force layout
+  void show.offsetHeight; 
 
   show.style.transition = 'opacity .26s ease, transform .26s cubic-bezier(.25,.85,.35,1)';
   show.style.transform  = 'translateX(0)';
@@ -1432,7 +1329,6 @@ function screenFadeTo(showId, hideId) {
   const hide = document.getElementById(hideId);
   if (!show || !hide) return;
 
-  // Phase 1: fade out the current screen
   hide.style.transition = 'opacity .18s ease';
   hide.style.opacity    = '0';
   hide.style.pointerEvents = 'none';
@@ -1443,11 +1339,10 @@ function screenFadeTo(showId, hideId) {
     hide.style.opacity    = '';
     hide.style.pointerEvents = '';
 
-    // Phase 2: show and fade in the new screen
     show.classList.remove('hidden');
     show.style.opacity    = '0';
     show.style.transition = '';
-    // Force layout so transition plays
+    
     void show.offsetHeight;
     show.style.transition = 'opacity .2s ease';
     show.style.opacity    = '1';
@@ -1458,7 +1353,6 @@ function screenFadeTo(showId, hideId) {
   }, 190);
 }
 
-// Animated modal open/close
 function openModal(overlayId) {
   const el = document.getElementById(overlayId);
   if (el) el.classList.remove('hidden');
@@ -1469,7 +1363,6 @@ function closeModal(overlayId) {
   if (el) el.classList.add('hidden');
 }
 
-// Stagger children with animation delay
 function staggerChildren(container, selector, baseDelay=0, step=0.05, max=0.35) {
   const items = container?.querySelectorAll(selector);
   if (!items) return;
@@ -1478,7 +1371,6 @@ function staggerChildren(container, selector, baseDelay=0, step=0.05, max=0.35) 
   });
 }
 
-// Add tap ripple to an element
 function addRipple(el, e) {
   const rect = el.getBoundingClientRect();
   const x = (e.clientX || rect.left + rect.width/2) - rect.left;
@@ -1493,29 +1385,25 @@ function addRipple(el, e) {
   r.addEventListener('animationend', () => r.remove(), { once: true });
 }
 
-
-// RENDER
 function render(){
   appRendered = true;
   if(isT()){ if(typeof window.renderTeacher==="function") window.renderTeacher(); else renderTeacher(); }
   else { if(typeof window.renderStudent==="function") window.renderStudent(); else renderStudent(); }
-  // Always show analytics button after any render
+  
   const _db=document.getElementById('dashBtn');
   if(_db) _db.classList.remove('hidden');
-  // Bust placeholder cache so new teacher/batch names appear in suggestions
+  
   window._searchPlaceholderReset?.();
-  // Run count-up on total amount after DOM settles
+  
   setTimeout(_applyCurSymbol, 30);
   setTimeout(runTotalCountUp, 60);
 }
 
-// Partial render — only update the cards list (used by search to preserve input focus)
 function renderCards(){
-  if(isT()) return; // teacher view doesn't have same structure
+  if(isT()) return; 
   const container=document.getElementById('cards-list');
-  if(!container){ render(); return; } // fallback if not rendered yet
+  if(!container){ render(); return; } 
 
-  // Update section count
   const countEl=document.getElementById('teachers-count');
   if(countEl) countEl.textContent=Object.keys(teachers).length;
 
@@ -1529,7 +1417,7 @@ function renderCards(){
     return;
   }
   let h='', dl=0;
-  // Pre-index payments by teacher so the loop doesn't scan the full array per card (O(n×m) → O(n))
+  
   const _paysByTeacher = {};
   payments.forEach(p => { (_paysByTeacher[p.teacherId] = _paysByTeacher[p.teacherId] || []).push(p); });
   for(const id of sorted){
@@ -1605,14 +1493,14 @@ function renderStudent(){
     <div id="cards-list">`;
 
   if(!Object.keys(teachers).length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="6" y="6" width="4" height="40" rx="2" fill="currentColor" opacity=".3"/></svg></div><div class="empty-title">No teachers yet</div><div class="empty-sub">Tap <strong>+</strong> to add your first teacher and start tracking.</div></div></div>`;
+    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http:
     root.innerHTML=h; return;
   }
   const sorted=Object.keys(teachers).sort((a,b)=>calcDue(b)-calcDue(a)).filter(id=>{ const q=searchQ.toLowerCase(); return !q||teachers[id].name.toLowerCase().includes(q)||teachers[id].subject.toLowerCase().includes(q); });
   if(!sorted.length){ h+=`<div class="no-results">No results for "<strong>${searchQ}</strong>"</div></div>`; root.innerHTML=h; return; }
 
   let dl=0;
-  // Pre-index payments by teacher — avoids O(n×m) filter per card
+  
   const _pbtRS = {};
   payments.forEach(p => { (_pbtRS[p.teacherId] = _pbtRS[p.teacherId] || []).push(p); });
   for(const id of sorted){
@@ -2004,7 +1892,7 @@ function addOnePending(){
   ni.focus();renderPendingList();
 }
 window.rmPending=function(i){pendingStudents.splice(i,1);renderPendingList();};
-// Edit a pending (not-yet-saved) student inline
+
 window.editPending=function(i){
   const s=pendingStudents[i];
   document.getElementById('newStudentNameInp').value=s.name;
@@ -2024,7 +1912,7 @@ async function saveAllStudents(){
       const sd={name:s.name,baselineMonth:bm,baselineYear:by,createdAt:Date.now(),feeStatus:s.feeStatus||'never'};
       if(s.date){const p=s.date.split('-');sd.admissionDay=parseInt(p[2]);sd.admissionMonth=parseInt(p[1]);sd.admissionYear=parseInt(p[0]);}
       if(s.payDate){
-        // Payment date field overrides everything — dues calculated from this date
+        
         const pp=s.payDate.split('-');
         sd.baselineMonth=parseInt(pp[1]);sd.baselineYear=parseInt(pp[0]);
         sd.lastPaidDate=s.payDate;
@@ -2050,7 +1938,7 @@ function renderTeacher(){
   const subjLine=[subjs.length?subjs.join(', '):'No subjects set', classes.length?classes.join(', '):'', sess].filter(Boolean).join(' · ');
   let h=`
     ${!profile.displayName?`<div class="setup-banner" onclick="openProfileModal()"><span class="setup-banner-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><div class="setup-banner-text"><div class="setup-banner-title">Set up your teacher profile</div><div class="setup-banner-sub">Add your subjects and session</div></div><button class="setup-banner-btn">Set up</button></div>`:''}
-    <div class="teacher-mode-header" onclick="openTeacherDash()" style="cursor:pointer" title="Open Analytics"><div class="tmh-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="tmh-info"><div class="tmh-title">Teacher Dashboard</div><div class="tmh-sub">${subjLine}</div></div><div style="display:flex;align-items:center;color:var(--accent);opacity:.8;transition:opacity .2s;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="1" y="9" width="4" height="7" rx="1.2" fill="currentColor" opacity=".4"/><rect x="6" y="5" width="4" height="11" rx="1.2" fill="currentColor" opacity=".68"/><rect x="11" y="1" width="4" height="15" rx="1.2" fill="currentColor"/><line x1="1" y1="15.5" x2="15" y2="15.5" stroke="currentColor" stroke-width="1" opacity=".3"/></svg></div></div>
+    <div class="teacher-mode-header" onclick="openTeacherDash()" style="cursor:pointer" title="Open Analytics"><div class="tmh-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="tmh-info"><div class="tmh-title">Teacher Dashboard</div><div class="tmh-sub">${subjLine}</div></div><div style="display:flex;align-items:center;color:var(--accent);opacity:.8;transition:opacity .2s;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http:
     <div class="search-wrap">
       <span class="search-icon" style="display:flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:block"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.7"/><line x1="10.5" y1="10.5" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
       <input class="search-input" type="text" placeholder="Search batch…" id="teacherSearchInp" value="${searchQ}" oninput="onSearch(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" />
@@ -2434,6 +2322,17 @@ async function bootApp(user) {
   }
 }
 
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+getRedirectResult(auth).then(async r => {
+  if (r?.user) await bootApp(r.user);
+}).catch(e => {
+  if (e.code && e.code !== 'auth/no-current-user') toast('Login error: '+e.code,'error');
+});
+
+// Snapshot uid synchronously BEFORE any Firebase async code runs.
+// onAuthStateChanged(null) fires when offline and wipes ft_uid —
+// this snapshot preserves it so the offline guard always works.
 const _cachedUidSnapshot = localStorage.getItem('ft_uid');
 let _offlineBooted = false;
 let _reconnecting  = false; // blocks false signout during reconnect window
@@ -2516,8 +2415,14 @@ setTimeout(() => {
   }
 }, 4000);
 
-function _handleSignedOut() {
+// ── onAuthStateChanged ─────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    if (!loaded) await bootApp(user);
+  } else {
+    // Firebase fires null when offline — ignore if user was previously signed in
     if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting || (Date.now()-(_onlineSince||0)<12000))) return;
+    // Real sign-out — clear everything
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
     try { localStorage.removeItem('ft_uid'); localStorage.removeItem('ft_db_shard'); } catch(e){}
@@ -2538,7 +2443,8 @@ function _handleSignedOut() {
     const lc=document.getElementById('loginContent');
     if(ls){ ls.classList.add('fade-out'); setTimeout(()=>{ls.classList.add('hidden');if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}},420); }
     else if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}
-}
+  }
+});
 
 document.getElementById('googleSignInBtn').addEventListener('click', async () => {
   const btn = document.getElementById('googleSignInBtn');
@@ -2546,7 +2452,9 @@ document.getElementById('googleSignInBtn').addEventListener('click', async () =>
   btn.disabled=true;
   document.getElementById('avatarEl')?.classList.add('loading');
   try {
+    // Try popup first — fastest, no full-page redirect
     await signInWithPopup(auth, provider);
+    // onAuthStateChanged fires → bootApp handles the rest
   } catch(e) {
     if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
       // Popup blocked (some mobile browsers) — fall back to redirect
@@ -2827,25 +2735,23 @@ function _syncMenuToggle() {
   const icon  = document.getElementById('menuThemeIcon');
   const inner = document.querySelector('#menuThemeLabel .lbl-inner');
   if (sw)    sw.classList.toggle('light-mode', !isDark);
-  if (icon)  icon.innerHTML = isDark ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0" ><path d="M14.5 10.5A7 7 0 0 1 6 1.5a7 7 0 1 0 8.5 9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0" ><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="1" x2="8" y2="2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="13.5" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="8" x2="2.5" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="13.5" y1="8" x2="15" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3.1" y1="3.1" x2="4.2" y2="4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11.8" y1="11.8" x2="12.9" y2="12.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11.8" y1="4.2" x2="12.9" y2="3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3.1" y1="12.9" x2="4.2" y2="11.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  if (icon)  icon.innerHTML = isDark ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http:
   if (inner) inner.textContent = isDark ? 'Dark Mode' : 'Light Mode';
 }
 
-// Wire up menu theme button — reads state BEFORE toggle
 document.getElementById('menuThemeBtn')?.addEventListener('click', () => {
-  const goingDark = document.documentElement.classList.contains('light'); // currently light → going dark
-  toggleTheme(); // flip the actual theme
-  _applyMenuToggle(goingDark); // animate to new state
+  const goingDark = document.documentElement.classList.contains('light'); 
+  toggleTheme(); 
+  _applyMenuToggle(goingDark); 
 });
 
-// Keep in sync with _refreshThemeUI (called on profile modal open etc.)
 const _origRefreshUI = window._refreshThemeUI;
 window._refreshThemeUI = function() {
   if (typeof _origRefreshUI === 'function') _origRefreshUI();
   _syncMenuToggle();
 };
 
-function updateMenuThemeLabel() { _syncMenuToggle(); } // legacy compat
+function updateMenuThemeLabel() { _syncMenuToggle(); } 
 
 function updateNotifMenuLabel() {
   const label = document.getElementById('menuNotifLabel');
@@ -2862,12 +2768,9 @@ function updateNotifMenuLabel() {
     if (arrow) arrow.style.color = '';
   }
 }
-// Set label on load
+
 updateNotifMenuLabel();
 
-// ═══════════════════════════════════════════════════
-//  NOTIFICATION TOGGLE — full animation like theme toggle
-// ═══════════════════════════════════════════════════
 function _syncNotifToggle(){
   const sw=document.getElementById('menuNotifSwitch');
   const inner=document.querySelector('#menuNotifLabel .notif-lbl-inner');
@@ -2920,23 +2823,23 @@ document.getElementById('menuNotifBtn')?.addEventListener('click',async()=>{
   const off=localStorage.getItem('ft_reminders_off')==='1';
   const on=perm==='granted'&&!off;
   if(on){
-    // Turn off — animate toggle but keep menu open so user sees the change
+    
     localStorage.setItem('ft_reminders_off','1');
     _applyNotifToggle(false);
     toast('Reminders turned off','');
-    // No closeMenu() — let user see the toggle state
+    
   } else if(perm==='denied'){
     _applyNotifToggle(false);
     toast('Enable notifications in browser settings','error');
-    // No closeMenu() — user sees the blocked state
+    
   } else if(perm==='granted'&&off){
-    // Turn back on
+    
     localStorage.removeItem('ft_reminders_off');
     _applyNotifToggle(true);
     toast('Reminders on','success');
-    // No closeMenu()
+    
   } else {
-    // Request permission — animate toggle optimistically, then request
+    
     _applyNotifToggle(true);
     setTimeout(async()=>{
       await initNotifications();
@@ -2944,27 +2847,24 @@ document.getElementById('menuNotifBtn')?.addEventListener('click',async()=>{
         localStorage.removeItem('ft_reminders_off');
         toast('Reminders enabled','success');
       } else {
-        _syncNotifToggle(); // revert animation if denied
+        _syncNotifToggle(); 
       }
     },340);
-    // No closeMenu()
+    
   }
 });
 
-// Expose internal helpers needed by pwa.js (a non-module script loaded after this module)
 window._cooldown = _cooldown;
 window.getCacheUid = getCacheUid;
 window.toast = toast;
 
-// Patch checkDueReminder to respect off-flag
 const _origCheckDue=checkDueReminder;
 window._checkDueReminder=function(force=false){
   if(localStorage.getItem('ft_reminders_off')==='1') return;
   _origCheckDue(force).catch(()=>{});
 };
 
-// SELECTION MODE
-let selMode=false, selItems=new Set(), selContext=''; // context: 'teacher','batch','student'
+let selMode=false, selItems=new Set(), selContext=''; 
 
 function _allCards(){
   return document.querySelectorAll(
@@ -2976,7 +2876,7 @@ function _allCards(){
 }
 
 function _ensureSelRow(card){
-  // Each card gets a .sel-row injected once (if not already present)
+  
   if(card.querySelector('.sel-row')) return;
   const id = card.dataset.id;
   const row = document.createElement('div');
@@ -2989,13 +2889,10 @@ function enterSelMode(context, firstId){
   selMode = true; selContext = context; selItems.clear();
   selItems.add(firstId);
 
-  // Hide overview — no re-render needed
   document.getElementById('appInner')?.classList.add('sel-active');
   document.body.classList.add('sel-active');
   document.getElementById('selBar').classList.remove('hidden');
 
-  // Put all visible cards into sel-mode and inject sel-rows instantly
-  // Put all visible cards into sel-mode instantly (no layout shift)
   _allCards().forEach(card => {
     card.classList.add('sel-mode');
     _ensureSelRow(card);
@@ -3011,7 +2908,6 @@ function exitSelMode(){
   document.body.classList.remove('sel-active');
   document.getElementById('selBar').classList.add('hidden');
 
-  // Remove sel-mode styling from all cards
   _allCards().forEach(card => {
     card.classList.remove('sel-mode', 'selected');
     const circle = card.querySelector('.sel-circle');
@@ -3040,12 +2936,10 @@ function toggleSelItem(id){
 function updateSelBar(){
   document.getElementById('selCount').textContent=selItems.size;
   const assignBtn=document.getElementById('selAssignBtn');
-  // Assign batch only for student context (teacher role, standalone students)
+  
   assignBtn.classList.toggle('hidden', selContext!=='student');
 }
 
-// Long-press via event delegation — one listener on the container, survives re-renders
-// No need to re-attach after every render. Works as long as cards have data-id.
 (function initLongPressDelegate(){
   const HOLD_MS = 600;
   let _timer = null;
@@ -3061,7 +2955,7 @@ function updateSelBar(){
     const card = cardFrom(e.target);
     if(!card) return;
     if(selMode){
-      // In selection mode a normal tap toggles — handled by onclick on card
+      
       return;
     }
     _moved = false;
@@ -3078,7 +2972,7 @@ function updateSelBar(){
         ? 'teacher' : _startCard.classList.contains('batch-card')
         ? 'batch' : 'student';
       if(navigator.vibrate) navigator.vibrate(32);
-      // Prevent the imminent click from opening the card
+      
       _startCard._suppressClick = true;
       setTimeout(()=>{ if(_startCard) _startCard._suppressClick = false; }, 600);
       enterSelMode(ctx, id);
@@ -3089,14 +2983,13 @@ function updateSelBar(){
     const touch = e.touches?.[0];
     if (touch && _startX !== undefined) {
       const dx = touch.clientX - _startX, dy = touch.clientY - _startY;
-      if (Math.hypot(dx, dy) < 8) return; // ignore tiny tremors
+      if (Math.hypot(dx, dy) < 8) return; 
     }
     _moved = true;
     if(_timer){ clearTimeout(_timer); _timer = null; }
   }
   function onEnd(){  if(_timer){ clearTimeout(_timer); _timer = null; } _startCard = null; }
 
-  // Attach to a stable container that always exists
   document.addEventListener('touchstart', onStart, { passive: true });
   document.addEventListener('touchmove',  onMove,  { passive: true });
   document.addEventListener('touchend',   onEnd,   { passive: true });
@@ -3104,26 +2997,21 @@ function updateSelBar(){
   document.addEventListener('mouseup',    onEnd);
   document.addEventListener('mousemove',  e => { if(e.buttons) onMove(); });
 
-  // Suppress click after long-press so card doesn't open
   document.addEventListener('click', e => {
     const card = cardFrom(e.target);
     if(card && card._suppressClick){ e.stopImmediatePropagation(); e.preventDefault(); }
   }, true);
 })();
 
-// Tap in selection mode — toggle selection
-// Also expose selMode so inline onclick handlers can check it
 window.selTap=function(id){
   if(!selMode) return false;
   toggleSelItem(id);
   return true;
 };
-// Expose read-only getter for selMode so card onclick can check it
+
 Object.defineProperty(window,'selMode',{ get:()=>selMode });
 
-// Selection bar buttons
 document.getElementById('selBarClose')?.addEventListener('click',exitSelMode);
-
 
 document.getElementById('selDeleteBtn')?.addEventListener('click',async()=>{
   const ids=[...selItems];
@@ -3153,7 +3041,6 @@ document.getElementById('selDeleteBtn')?.addEventListener('click',async()=>{
   selContext='';
 });
 
-// ── Assign to batch ──
 let _assignStudentIds=[];
 document.getElementById('selAssignBtn')?.addEventListener('click',()=>{
   _assignStudentIds=[...selItems];
@@ -3194,12 +3081,12 @@ document.getElementById('confirmAssignBatchBtn')?.addEventListener('click',async
     const now=new Date(),bm=now.getMonth()+1,by=now.getFullYear();
     for(const sid of _assignStudentIds){
       if(_assignIsStandalone){
-        // Moving from standalone collection
+        
         const s=_standaloneStudents.find(x=>x.id===sid)||{};
         await addDoc(stuCol(bid),{name:s.name||'Student',baselineMonth:s.baselineMonth||bm,baselineYear:s.baselineYear||by,fee:s.fee,lastPaidDate:s.lastPaidDate||null,createdAt:Date.now(),feeStatus:'never'});
         await deleteDoc(doc(db,'users',uid(),'students',sid));
       } else {
-        // Moving from batch students
+        
         const st=batchStudents[sid]||{name:'Student',baselineMonth:bm,baselineYear:by};
         await addDoc(stuCol(bid),{name:st.name,baselineMonth:st.baselineMonth||bm,baselineYear:st.baselineYear||by,createdAt:Date.now(),feeStatus:'never'});
       }
@@ -3219,7 +3106,6 @@ document.getElementById('confirmAssignBatchBtn')?.addEventListener('click',async
   btn.disabled=false; btn.textContent='Move to Batch';
 });
 
-// ── Standalone student (teacher role, no batch) ──
 window.openAddStandaloneStudent = function openAddStandaloneStudent(){
   const sel=document.getElementById('ssBatchSel');
   sel.innerHTML='<option value="">No batch — standalone</option>';
@@ -3253,14 +3139,14 @@ document.getElementById('confirmStandaloneStudentBtn')?.addEventListener('click'
     else { sd.baselineMonth=bm; sd.baselineYear=by; }
     if(dv){ const dp=dv.split('-'); sd.admissionDay=parseInt(dp[2]); sd.admissionMonth=parseInt(dp[1]); sd.admissionYear=parseInt(dp[0]); }
     if(bid){
-      // Add into chosen batch
+      
       await addDoc(stuCol(bid),sd);
       _invalidateBatchCache(bid);
       toast(`${nm} added to ${batches[bid].name} ✓`,'success');
     } else {
-      // Save to standalone students collection
+      
       const _newRef = await addDoc(collection(db,'users',uid(),'students'),sd);
-      // Push locally so card appears immediately without reload
+      
       _standaloneStudents.push({id:_newRef.id,...sd});
       idbSet('standalone_students',_standaloneStudents);
       try { idbSet('_standaloneStudentsTs', Date.now()); } catch(e){}
@@ -3276,10 +3162,8 @@ document.getElementById('confirmStandaloneStudentBtn')?.addEventListener('click'
   btn.disabled=false; btn.textContent='Add Student';
 });
 
-// ── Patch renderStudent + renderTeacher to support selection mode and pinning ──
-// Pinning: sort pinned items first
 function _patchedRenderStudent(){
-  // Get sorted teachers with pin awareness
+  
   const root=document.getElementById('appInner');
   const td=totalDue(), n=new Date();
   const ds=n.toLocaleDateString(USER_LOCALE,{day:'numeric',month:'long',year:'numeric'});
@@ -3314,16 +3198,16 @@ function _patchedRenderStudent(){
     <div class="section-label"><span class="section-label-txt">Teachers</span><span class="section-label-count" id="teachers-count">${Object.keys(teachers).length}</span></div>
     <div id="cards-list">`;
   if(!Object.keys(teachers).length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="6" y="6" width="4" height="40" rx="2" fill="currentColor" opacity=".3"/></svg></div><div class="empty-title">No teachers yet</div><div class="empty-sub">Tap <strong>+</strong> to add your first teacher and start tracking.</div></div></div>`;
+    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http:
     root.innerHTML=h; return;
   }
-  // Sort: pinned first, then by due
+  
   let sorted=Object.keys(teachers).sort((a,b)=>{
     return calcDue(b)-calcDue(a);
   }).filter(id=>{ const q=searchQ.toLowerCase(); return !q||teachers[id].name.toLowerCase().includes(q)||teachers[id].subject.toLowerCase().includes(q); });
   if(!sorted.length){ h+=`<div class="no-results">No results for "<strong>${searchQ}</strong>"</div></div>`; root.innerHTML=h; return; }
   let dl=0;
-  // Pre-index payments by teacher — avoids O(n×m) filter per card
+  
   const _pbtPRS = {};
   payments.forEach(p => { (_pbtPRS[p.teacherId] = _pbtPRS[p.teacherId] || []).push(p); });
   for(const id of sorted){
@@ -3429,8 +3313,8 @@ async function loadAndRenderStandaloneStudents(root){
         </div>
         <div class="sc-actions">
           <div style="flex:1;padding:9px 13px;font-size:11px;color:var(--muted)">No batch assigned</div>
-          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> Assign</button>
-          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http:
+          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http:
         </div>
       </div>`;
     });
@@ -3542,7 +3426,7 @@ async function renderTeacherDash(){
   // destroyCharts called by close or open — not here (avoids double-destroy)
   const body=document.getElementById('teacherDashBody'); if(!body)return;
   const bKeys=Object.keys(batches);
-  if(!bKeys.length){ body.innerHTML='<div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M26 9L5 21l21 12 21-12L26 9z" fill="currentColor" opacity=".1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 30l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><path d="M5 39l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/></svg></div><div class="dash-empty-txt">No batches yet.</div></div>'; return; }
+  if(!bKeys.length){ body.innerHTML='<div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http:
   body.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">Loading…</div>';
   const allStats=await fetchAllBatchStats();
   const now=new Date(),curM=now.getMonth()+1,curY=now.getFullYear();
@@ -3569,7 +3453,7 @@ async function renderTeacherDash(){
     batchSummaries.push({bid,name:b.name,stuCount:stuKeys.length,paidCount:bPaid,dueCount:stuKeys.length-bPaid,due:bDue});
   }
   const collRate=grandStudents>0?Math.round((grandPaid/grandStudents)*100):0;
-  // Add standalone students to total count
+  
   const standaloneCount = (typeof _standaloneStudents !== 'undefined') ? _standaloneStudents.length : 0;
   grandStudents += standaloneCount;
   const overdueStu=grandStudents-grandPaid;
@@ -3671,14 +3555,8 @@ window.renderStudentDash=function(){
   if(lCtx){const cd=chartDefaults();_stuDashCharts.push(new Chart(lCtx,{type:'line',data:{labels:monthLabels2,datasets:[{label:'Paid (₹)',data:monthAmts2,borderColor:'#ff6b9d',backgroundColor:'rgba(255,107,157,.1)',tension:.4,fill:true,pointBackgroundColor:'#ff6b9d',pointRadius:4,borderWidth:2}]},options:{...cd,plugins:{...cd.plugins,legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>v>=1000?'₹'+(v/1000).toFixed(0)+'k':'₹'+v},grid:{color:gc}}}}}));}
 };
 
-// Wire dashboard button
 document.getElementById('dashBtn')?.addEventListener('click',()=>{ if(isT()) window.openTeacherDash(); else window.openStudentDash(); });
 
-// dashBtn is shown by render() directly
-
-// ═══════════════════════════════════════════════════
-// EDIT TEACHER (student role) — name, subject, fee, last payment date
-// ═══════════════════════════════════════════════════
 let _editTeacherId='';
 window.openEditTeacher=function(id){
   _editTeacherId=id;
@@ -3715,9 +3593,6 @@ document.getElementById('confirmEditTeacherBtn')?.addEventListener('click',async
   btn.disabled=false; btn.textContent='Save Changes';
 });
 
-// ═══════════════════════════════════════════════════
-// EDIT STANDALONE STUDENT (teacher role)
-// ═══════════════════════════════════════════════════
 let _editSsId='';
 document.getElementById('closeEditSsBtn')?.addEventListener('click',()=>document.getElementById('editStandaloneStudentModal').classList.add('hidden'));
 document.getElementById('cancelEditSsBtn')?.addEventListener('click',()=>document.getElementById('editStandaloneStudentModal').classList.add('hidden'));
@@ -3745,15 +3620,12 @@ document.getElementById('confirmEditSsBtn')?.addEventListener('click',async()=>{
   btn.disabled=false; btn.textContent='Save Changes';
 });
 
-// PATCH loadAll to also load standalone students
 const _origLoadAll=loadAll;
 window.loadAll=async function(silent=false, force=false){
   await _origLoadAll(silent, force);
   if(isT()) await loadStandaloneStudents();
 };
 
-
-// DASHBOARD SKELETON helper
 function dashSkeleton(){
   return `<div style="padding:0">
     <div class="dash-sk-row">
@@ -3768,7 +3640,6 @@ function dashSkeleton(){
   </div>`;
 }
 
-// PATCH dashboard openers to show skeleton first
 window.openTeacherDash=async function(force=false){
   screenFadeTo('teacherDashScreen','appScreen');
   document.getElementById('teacherDashBody').innerHTML=dashSkeleton();
@@ -3792,7 +3663,6 @@ window.closeStudentDash=function(){
   screenFadeTo('appScreen','studentDashScreen');
   window.sbSetActive?.('sbHome'); sbSetPage?.('home');
 };
-
 
 let _countUpRaf = null;
 function runTotalCountUp(){
@@ -3864,13 +3734,11 @@ window.filterByStatus = function(status){
   window._activeStatusFilter = status;
   _applyMetaHighlight(status);
 
-  // Update section label
   const lbl = document.querySelector('.section-label-txt');
   if(lbl){
     lbl.textContent = status==='pending' ? 'Pending' : status==='clear' ? 'Clear' : 'Teachers';
   }
 
-  // Filter cards-list
   const container = document.getElementById('cards-list');
   if(!container) return;
 
@@ -3886,7 +3754,6 @@ window.filterByStatus = function(status){
     if(show) shownCount++;
   });
 
-  // Show empty state if nothing matches
   let noRes = container.querySelector('.filter-empty');
   if(shownCount === 0 && status !== 'all'){
     if(!noRes){
@@ -3904,7 +3771,6 @@ window.filterByStatus = function(status){
     ? Object.keys(teachers).length
     : shownCount;
 
-  // Haptic feedback on mobile (best-effort)
   try{ if(navigator.vibrate) navigator.vibrate(10); } catch(e){}
 
   if(status==='pending' && shownCount > 0)
@@ -3914,9 +3780,9 @@ window.filterByStatus = function(status){
 };
 
 window.handleTotalCardClick = function(e){
-  // If a meta item was tapped, its own onclick handles it
+  
   if(e.target.closest('.total-meta-item')) return;
-  // Otherwise: if a filter is active, clear it; else open analytics
+  
   if(window._activeStatusFilter && window._activeStatusFilter !== 'all'){
     filterByStatus('all');
   } else {
@@ -3924,8 +3790,6 @@ window.handleTotalCardClick = function(e){
   }
 };
 
-
-// TEACHER DETAIL SHEET
 let _tdsId = null;
 
 function _tdsPayHtml(id){
@@ -4067,20 +3931,14 @@ document.getElementById('tdsDeleteBtn')?.addEventListener('click', async()=>{
 });
 window.closeTeacherDetail = closeTeacherDetail;
 
-// _patchedRenderStudent: handled by window.renderStudent = _patchedRenderStudent above
-
-// Sync notif on load
 _syncNotifToggle();
 
-// ══════════════════════════════════════════════════════════════
-// DESKTOP SIDEBAR — full navigation, profile sheet, body-state
-// ══════════════════════════════════════════════════════════════
 (function initDesktopSidebar() {
   const sidebar = document.getElementById('desktopSidebar');
   if (!sidebar) return;
   const isDesktop = () => window.innerWidth >= 960;
   function applyLayout() {
-    // Only show sidebar when signed in and on desktop
+    
     const signedIn = !!localStorage.getItem('ft_uid');
     const onLoginPage = document.body.classList.contains('page-login') ||
                         document.body.classList.contains('page-onboard');
@@ -4091,7 +3949,6 @@ _syncNotifToggle();
   window._sbRefreshLayout = applyLayout;
 })();
 
-// Set body page-state classes so CSS can hide/show sidebar per page
 function sbSetPage(page) {
   document.body.classList.remove('page-login','page-onboard','page-home','page-analytics','page-history');
   document.body.classList.add('page-'+page);
@@ -4103,7 +3960,6 @@ window.sbSetActive = function(id) {
   document.getElementById(id)?.classList.add('active');
 };
 
-// Nav handlers
 window.sbGoHome = function() {
   try { if(typeof closeBatchDetail==='function') closeBatchDetail(); } catch(e){}
   ['batchDetailScreen','teacherDashScreen','studentDashScreen','historyScreen']
@@ -4134,14 +3990,13 @@ window.sbOpenProfile = function() {
   sbSetActive('sbProfile');
 };
 
-// Sidebar user menu (three-dot)
 window.sbToggleUserMenu = function() {
   const m = document.getElementById('sbUserMenu');
   if (!m) return;
   const isOpen = m.style.display !== 'none';
   m.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
-    // Close on outside click
+    
     setTimeout(() => {
       document.addEventListener('click', function _c(){ m.style.display='none'; document.removeEventListener('click',_c); });
     }, 10);
@@ -4178,11 +4033,8 @@ window._syncSidebarUser = function(user) {
   window._sbRefreshLayout?.();
 };
 
-// Mark login/onboard page on boot
 sbSetPage('home');
 
-// Search topbar button — focuses the search input (renders it if needed)
-// ── Desktop: Cmd/Ctrl+K focuses search ──
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
@@ -4199,7 +4051,6 @@ document.getElementById('searchTopbarBtn')?.addEventListener('click',()=>{
   }
 });
 
-// ── Global Enter → blur (dismiss soft keyboard) on all text/number inputs ──
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const tag = e.target.tagName;
@@ -4208,20 +4059,19 @@ document.addEventListener('keydown', e => {
   e.target.blur();
 }, false);
 
-// ── Hardware/browser back button — close active layers first ──
 (function initBackHandler(){
-  // Push a state so we can intercept the first back press
+  
   history.pushState({ ftLayer: 0 }, '');
 
   window.addEventListener('popstate', e => {
-    // Check screens/modals from outermost to innermost
+    
     const layers = [
-      // Dashboard screens
+      
       { el: ()=>{ const s=document.getElementById('teacherDashScreen'); return s&&!s.classList.contains('hidden')?s:null; }, close: ()=>{ destroyCharts(_tchDashCharts); document.getElementById('teacherDashScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); } },
       { el: ()=>{ const s=document.getElementById('studentDashScreen'); return s&&!s.classList.contains('hidden')?s:null; }, close: ()=>{ destroyCharts(_stuDashCharts); document.getElementById('studentDashScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); } },
-      // Batch detail
+      
       { el: ()=>{ const s=document.getElementById('batchDetailScreen'); return s&&!s.classList.contains('hidden')?s:null; }, close: ()=>closeBatchDetail() },
-      // Modal overlays
+      
       { el: ()=>{ const m=document.getElementById('addModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>closeAddModal() },
       { el: ()=>{ const m=document.getElementById('addStudentModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>closeAddStudentModal() },
       { el: ()=>{ const m=document.getElementById('editStudentModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>closeEditStudentModal() },
@@ -4231,11 +4081,11 @@ document.addEventListener('keydown', e => {
       { el: ()=>{ const m=document.getElementById('addStandaloneStudentModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>document.getElementById('addStandaloneStudentModal').classList.add('hidden') },
       { el: ()=>{ const m=document.getElementById('editTeacherModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>document.getElementById('editTeacherModal').classList.add('hidden') },
       { el: ()=>{ const m=document.getElementById('editStandaloneStudentModal'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>document.getElementById('editStandaloneStudentModal').classList.add('hidden') },
-      // User menu
+      
       { el: ()=>{ const m=document.getElementById('userMenu'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>closeMenu() },
-      // Teacher detail sheet
+      
       { el: ()=>{ const m=document.getElementById('teacherDetailSheet'); return m&&!m.classList.contains('hidden')?m:null; }, close: ()=>closeTeacherDetail() },
-      // Selection mode
+      
       { el: ()=>selMode?true:null, close: ()=>exitSelMode() },
     ];
 
@@ -4250,18 +4100,13 @@ document.addEventListener('keydown', e => {
       } catch(err){}
     }
 
-    // Only re-push state if we handled something — otherwise let browser navigate back
     if(handled) history.pushState({ ftLayer: 0 }, '');
   });
 })();
 
-  
-// ══════════════════════════════════════════════════════════════════
-// ANIMATED SEARCH PLACEHOLDER
-// ══════════════════════════════════════════════════════════════════
 (function initSearchPlaceholder(){
   let _t = null, _idx = 0;
-  let _phCache = null; // cached placeholder list — rebuilt only when data changes
+  let _phCache = null; 
   function getPH(){
     if (_phCache) return _phCache;
     const base = isT() ? ['Search batch or subject…'] : ['Search teacher or subject…'];
@@ -4272,7 +4117,7 @@ document.addEventListener('keydown', e => {
     _phCache = base;
     return base;
   }
-  // Expose cache-bust so render() can call it after data changes
+  
   window._searchPlaceholderReset = function(){ _phCache = null; _idx = 0; };
   function cycle(){
     const inp = document.querySelector('#appInner .search-input');
@@ -4290,9 +4135,6 @@ document.addEventListener('keydown', e => {
   document.addEventListener('visibilitychange',()=>{ document.hidden?window._searchPHStop():window._searchPHStart(); });
 })();
 
-// ══════════════════════════════════════════════════════════════════
-// HISTORY SCREEN
-// ══════════════════════════════════════════════════════════════════
 let _histFilter = 'all'; let _histBatch = 'all'; let _histPeriod = 'all';
 
 window.openHistoryScreen = function(){
@@ -4332,7 +4174,6 @@ function _renderHistory(){
   if (!filEl || !conEl) return;
   const now = new Date();
 
-  // Build unified payment list
   let allPays = [];
   if (!isT()) {
     allPays = payments.map(p => ({
@@ -4350,7 +4191,6 @@ function _renderHistory(){
     }));
   }
 
-  // ── Period filter ──────────────────────────────────────
   let periodFiltered = allPays;
   if (_histPeriod === 'this') {
     periodFiltered = allPays.filter(p => {
@@ -4366,7 +4206,6 @@ function _renderHistory(){
     });
   }
 
-  // ── Batch filter (teacher only) ────────────────────────
   let batchFiltered = periodFiltered;
   if (isT() && _histBatch !== 'all') {
     batchFiltered = periodFiltered.filter(p =>
@@ -4374,12 +4213,9 @@ function _renderHistory(){
     );
   }
 
-  // ── Type filter ────────────────────────────────────────
   const shown = batchFiltered;
   shown.sort((a,b) => b.timestamp - a.timestamp);
 
-  // ── Build filter rows ──────────────────────────────────
-  // Row 1: period
   const periodRow = `<div class="hist-filter-row" style="margin-bottom:8px">
     ${[['all','All time'],['this','This month'],['prev','Last month']].map(([k,l]) =>
       `<div class="hist-filter-chip${_histPeriod===k?' active':''}" onclick="_setHistPeriod('${k}')">${l}</div>`
@@ -4408,7 +4244,6 @@ function _renderHistory(){
     </div>`;
   }
 
-  // Row 3: type chips
   const typeBase = isT() ? batchFiltered : periodFiltered;
   const cts = {
     all    : typeBase.length,
@@ -4420,7 +4255,6 @@ function _renderHistory(){
 
   filEl.innerHTML = periodRow + row2 + typeRow;
 
-  // ── Render list ────────────────────────────────────────
   if (!shown.length) {
     conEl.innerHTML = `<div class="hist-empty-state">
       <div class="hist-empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="1.5" opacity=".2"/><polyline points="24,13 24,24 30,28" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -4473,7 +4307,6 @@ window.exportHistoryCSV = function(){
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const now = new Date();
 
-  // Build filtered data based on current history filters
   let allPays = [];
   if (!isT()) {
     allPays = payments.map(p => ({
@@ -4493,7 +4326,6 @@ window.exportHistoryCSV = function(){
     }));
   }
 
-  // Apply same filters as the history view
   if (_histPeriod === 'this') {
     allPays = allPays.filter(p => {
       const d = p.paidOn ? new Date(p.paidOn.year,(p.paidOn.month||1)-1,1) : new Date(p.ts);
@@ -4515,7 +4347,6 @@ window.exportHistoryCSV = function(){
 
   if (!allPays.length) { toast('No data to export','error'); return; }
 
-  // ── Build styled XLSX if SheetJS is available ──────────────────
   if (typeof XLSX !== 'undefined') {
     const wb = XLSX.utils.book_new();
     const title = isT() ? 'Fee Tracker — Collections' : 'Fee Tracker — Payments';
@@ -4524,7 +4355,6 @@ window.exportHistoryCSV = function(){
       ? ['Date','Student','Batch','Type','Months','Amount (₹)']
       : ['Date','Teacher','Subject','Type','Months','Amount (₹)'];
 
-    // Build array of arrays (AOA) with 2 title rows + header + data
     const aoa = [
       [title],
       [subTitle],
@@ -4537,16 +4367,13 @@ window.exportHistoryCSV = function(){
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-    // Column widths
     ws['!cols'] = [{wch:12},{wch:22},{wch:22},{wch:10},{wch:8},{wch:14}];
 
-    // Merge title row across all columns
     ws['!merges'] = [
       {s:{r:0,c:0},e:{r:0,c:5}},
       {s:{r:1,c:0},e:{r:1,c:5}},
     ];
 
-    // Style helpers
     const titleStyle  = {font:{bold:true,sz:14,color:{rgb:'7C6BFF'}},alignment:{horizontal:'left'},fill:{fgColor:{rgb:'0D0D1F'}}};
     const subStyle    = {font:{sz:10,color:{rgb:'8A8AB5'}},fill:{fgColor:{rgb:'0D0D1F'}}};
     const headerStyle = {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'4A35E0'}},alignment:{horizontal:'center'},border:{bottom:{style:'medium',color:{rgb:'7C6BFF'}}}};
@@ -4556,21 +4383,17 @@ window.exportHistoryCSV = function(){
     const totalStyle  = {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7C6BFF'}},numFmt:'#,##0'};
     const totalLblSty = {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7C6BFF'}}};
 
-    // Apply styles
     const setCellStyle = (r,c,sty) => {
       const addr = XLSX.utils.encode_cell({r,c});
       if (!ws[addr]) ws[addr] = {v:''};
       ws[addr].s = sty;
     };
 
-    // Title rows
     for(let c=0;c<=5;c++) setCellStyle(0,c,titleStyle);
     for(let c=0;c<=5;c++) setCellStyle(1,c,subStyle);
 
-    // Header row (row index 3)
     headers.forEach((_,c) => setCellStyle(3,c,headerStyle));
 
-    // Data rows (starting row 4)
     const typeColors = {full:'00D4AA',partial:'FF9A3C',advance:'7C6BFF'};
     allPays.forEach((p,i) => {
       const r = 4+i;
@@ -4589,7 +4412,6 @@ window.exportHistoryCSV = function(){
       }
     });
 
-    // Total row
     const totalR = 4+allPays.length+1;
     for(let c=0;c<=5;c++) setCellStyle(totalR,c,c===4||c===5?totalStyle:totalLblSty);
     const totalAmtAddr = XLSX.utils.encode_cell({r:totalR,c:5});
@@ -4604,7 +4426,7 @@ window.exportHistoryCSV = function(){
     toast('Excel file exported', 'success');
 
   } else {
-    // SheetJS not loaded — fall back to CSV
+    
     const headers = isT()?'Date,Student,Batch,Type,Months,Amount':'Date,Teacher,Subject,Type,Months,Amount';
     const rows = [headers, ...allPays.map(p=>[p.date,`"${p.name}"`,`"${p.sub}"`,p.type,p.months,p.amt].join(','))];
     const blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
@@ -4616,5 +4438,3 @@ window.exportHistoryCSV = function(){
     toast('CSV exported (install app for Excel)','success');
   }
 };
-
-_initFirebase().catch(e => { console.error('[FeeTracker] init failed:', e); });
