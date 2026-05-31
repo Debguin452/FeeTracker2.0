@@ -48,62 +48,44 @@ const _cfgPromise = _getConfig();
   }
 })();
 
-// If /api/config fails the whole module would crash silently — guard it
-let cfg;
-try {
-  cfg = await _cfgPromise;
-} catch (_cfgErr) {
-  console.error('[FeeTracker] Config unavailable:', _cfgErr);
-  // Hide splash, reveal login screen, show an error notice
+// ── Safety net ─────────────────────────────────────────────────────────────
+// Registered SYNCHRONOUSLY before any await, so it fires even if the module
+// crashes on config load. After 5 s it forces the login screen visible.
+window.__ftReady = false;
+const _safetyTid = setTimeout(() => {
+  if (window.__ftReady) return;
   const _sp = document.getElementById('splashSkeleton');
-  if (_sp) { _sp.classList.add('fade-out'); setTimeout(() => _sp.remove(), 420); }
-  const _ls  = document.getElementById('loginScreen');
-  const _lsk = document.getElementById('loginSkeleton');
-  const _lc  = document.getElementById('loginContent');
-  if (_ls)  _ls.classList.remove('hidden');
-  if (_lsk) { _lsk.classList.add('fade-out'); setTimeout(() => _lsk.classList.add('hidden'), 420); }
-  if (_lc) {
-    const _err = document.createElement('div');
-    _err.setAttribute('style',
-      'display:flex;align-items:center;gap:8px;' +
-      'background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);' +
-      'border-radius:10px;padding:10px 14px;margin-bottom:16px;' +
-      'font-size:13px;color:#ff4d6d;');
-    _err.textContent = 'App config unavailable — check connection and try again.';
-    const _note = _lc.querySelector('.login-note');
-    if (_note) _note.before(_err); else _lc.prepend(_err);
+  if (!_sp || _sp.classList.contains('fade-out')) return;
+  _sp.classList.add('fade-out');
+  setTimeout(() => {
+    _sp.remove();
+    const _ls  = document.getElementById('loginScreen');
+    const _lsk = document.getElementById('loginSkeleton');
+    const _lc  = document.getElementById('loginContent');
+    if (_ls)  _ls.classList.remove('hidden');
+    if (_lsk) {
+      _lsk.classList.add('fade-out');
+      setTimeout(() => { _lsk.classList.add('hidden'); if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }}, 420);
+    } else if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }
+    // If the module is dead, give the user a way out
     const _btn = document.getElementById('googleSignInBtn');
-    if (_btn) {
-      _btn.disabled = false;
-      _btn.textContent = 'Retry';
-      _btn.addEventListener('click', () => location.reload(), { once: true });
-    }
-    _lc.style.opacity = '1';
-    _lc.style.pointerEvents = 'auto';
-    _lc.classList.add('visible');
-  }
-  throw _cfgErr; // stop module — no Firebase, no listeners
-}
+    if (_btn) { _btn.disabled = false; }
+    const _note = document.querySelector('.login-note');
+    if (_note && !window.__ftReady) _note.textContent = 'Having trouble? Reload the page to try again.';
+  }, 420);
+}, 5000);
+
+const cfg = await _cfgPromise;
+window.__ftReady = true;   // config loaded — cancel safety net
+clearTimeout(_safetyTid);
 
 const _app1 = initializeApp(cfg.firebase.primary, 'primary');
-const _app2 = cfg.firebase.secondary ? initializeApp(cfg.firebase.secondary, 'secondary') : null;
 
 try {
   initializeAppCheck(_app1, { provider: new ReCaptchaV3Provider(cfg.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
 } catch {}
 
 const _db1 = getFirestore(_app1);
-const _db2 = _app2 ? getFirestore(_app2) : null;
-
-function _dbShard(uid) {
-  let h = 0;
-  for (let i = 0; i < uid.length; i++) h = (Math.imul(h, 31) + uid.charCodeAt(i)) | 0;
-  return (h >>> 0) % 2;
-}
-function _pickDb(uid) {
-  if (!_db2) return _db1;
-  return _dbShard(uid) === 0 ? _db1 : _db2;
-}
 
 let db = _db1;
 
@@ -116,7 +98,6 @@ function _enablePersistence(dbInstance) {
   });
 }
 _enablePersistence(_db1);
-if (_db2) _enablePersistence(_db2);
 
 let messaging = null;
 try { messaging = getMessaging(_app1); } catch {}
@@ -2279,9 +2260,7 @@ async function bootApp(user) {
   showOfflineBanner(false);
   loaded = true; cu = user;
 
-  // ── Route this user to the correct Firebase shard ──
-  db = _pickDb(user.uid);
-  try { localStorage.setItem('ft_db_shard', String(_dbShard(user.uid))); } catch(e){}
+  db = _db1;
   try { localStorage.setItem('ft_uid', user.uid); } catch {}
 
   const _gb = document.getElementById('googleSignInBtn');
@@ -2378,11 +2357,7 @@ let _onlineSince   = 0;
 async function _bootFromCache(cachedUid, cachedProfile) {
   if (_offlineBooted || loaded) return;
   _offlineBooted = true;
-  // Restore shard assignment from localStorage so collection refs point to the right DB
-  try {
-    const shard = localStorage.getItem('ft_db_shard') || '0';
-    db = (shard === '1' && _db2) ? _db2 : _db1;
-  } catch(e) { db = _db1; }
+  db = _db1;
   const fakeUser = { uid: cachedUid, displayName: cachedProfile.displayName || 'User', photoURL: null, email: cachedProfile.email || '' };
   await loadFromCacheAsync();
   profile = cachedProfile; updateRole();
@@ -2461,7 +2436,7 @@ onAuthStateChanged(auth, async user => {
     // Real sign-out — clear everything
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
-    try { localStorage.removeItem('ft_uid'); localStorage.removeItem('ft_db_shard'); } catch(e){}
+    try { localStorage.removeItem('ft_uid'); } catch(e){}
     try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
           idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
     const _gb2 = document.getElementById('googleSignInBtn');
