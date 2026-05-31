@@ -1,46 +1,23 @@
-const CACHE_MAX_AGE = 300;
-
-export async function onRequest(context) {
-  const { env, request } = context;
-
+export async function onRequest({ env, request }) {
   const origin = request.headers.get('Origin') || '';
-  const allowedOrigins = [
-    'https://feetracker2.pages.dev',
-    'https://feetracker.pages.dev',
-    'https://fee.tracker1.workers.dev',
-  ];
-  const originAllowed = allowedOrigins.includes(origin) || origin === '';
+  const allowed = ['https://feetracker2.pages.dev', 'https://feetracker.pages.dev'];
+  const corsOrigin = allowed.includes(origin) ? origin : (origin === '' ? '*' : 'null');
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': originAllowed ? origin : 'null',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400',
-      },
-    });
+    return new Response(null, { status: 204, headers: {
+      'Access-Control-Allow-Origin': corsOrigin,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+    }});
   }
 
-  if (request.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const required = [
-    'FB1_API_KEY', 'FB1_PROJECT_ID', 'FB1_MESSAGING_SENDER_ID', 'FB1_APP_ID',
-    'FB2_API_KEY', 'FB2_PROJECT_ID', 'FB2_MESSAGING_SENDER_ID', 'FB2_APP_ID',
-    'RECAPTCHA_SITE_KEY', 'FCM_VAPID_KEY',
-  ];
-
+  const required = ['FB1_API_KEY','FB1_PROJECT_ID','FB1_MESSAGING_SENDER_ID','FB1_APP_ID','RECAPTCHA_SITE_KEY','FCM_VAPID_KEY'];
   const missing = required.filter(k => !env[k]);
-  if (missing.length > 0) {
+  if (missing.length) {
     return new Response(JSON.stringify({ error: 'Server misconfiguration', missing }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': corsOrigin }
     });
   }
 
@@ -67,15 +44,13 @@ export async function onRequest(context) {
     vapidKey:         env.FCM_VAPID_KEY,
   };
 
-  const corsOrigin = originAllowed ? (origin || '*') : 'null';
-
   return new Response(JSON.stringify(config), {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': `public, max-age=${CACHE_MAX_AGE}, stale-while-revalidate=60`,
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
       'Access-Control-Allow-Origin': corsOrigin,
       'Vary': 'Origin',
-    },
+    }
   });
 }
