@@ -1,49 +1,59 @@
-export async function onRequest({ request, params, env }) {
+// Auth proxy — mirrors the production proxy exactly.
+// Reads FB1_PROJECT_ID from Cloudflare secret so no API keys are hardcoded.
+// authDomain in /api/config is set to this Pages domain (feetracker2.pages.dev)
+// so Firebase SDK routes all /__/auth/* calls through here to Firebase's auth servers.
+
+export async function onRequest(context) {
+  const { request, params, env } = context;
+
   const projectId = env.FB1_PROJECT_ID;
-  if (!projectId) return new Response('Auth proxy misconfigured: FB1_PROJECT_ID not set.', { status: 500 });
-
-  const authDomain = `${projectId}.firebaseapp.com`;
-  const url = new URL(request.url);
-  const upstreamPath = `/__/auth/${Array.isArray(params.path) ? params.path.join('/') : params.path}`;
-  const upstreamUrl = `https://${authDomain}${upstreamPath}${url.search}`;
-
-  const proxyHeaders = new Headers();
-  for (const [k, v] of request.headers.entries()) {
-    const l = k.toLowerCase();
-    if (['host','cf-connecting-ip','cf-ray','cf-visitor','cf-ipcountry','cf-worker',
-         'cdn-loop','x-forwarded-proto','x-forwarded-for','connection','keep-alive',
-         'transfer-encoding','te','upgrade'].includes(l)) continue;
-    proxyHeaders.set(k, v);
+  if (!projectId) {
+    return new Response('Auth proxy misconfigured: FB1_PROJECT_ID secret not set.', { status: 500 });
   }
 
-  let upstream;
+  const firebaseAuthDomain = `${projectId}.firebaseapp.com`;
+  const url                = new URL(request.url);
+  const pathSegments       = params.path;
+  const upstreamPath       = `/__/auth/${Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments}`;
+  const upstreamUrl        = `https://${firebaseAuthDomain}${upstreamPath}${url.search}`;
+
+  // Copy all request headers, set correct Host, remove Cloudflare-injected IP header
+  const proxyHeaders = new Headers(request.headers);
+  proxyHeaders.set('Host', firebaseAuthDomain);
+  proxyHeaders.delete('CF-Connecting-IP');
+
+  let upstreamResponse;
   try {
-    upstream = await fetch(upstreamUrl, {
-      method: request.method,
+    upstreamResponse = await fetch(upstreamUrl, {
+      method:  request.method,
       headers: proxyHeaders,
-      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+      body:    request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
       redirect: 'follow',
     });
   } catch (err) {
     return new Response(`Auth proxy error: ${err.message}`, { status: 502 });
   }
 
-  const resHeaders = new Headers();
-  for (const [k, v] of upstream.headers.entries()) {
-    const l = k.toLowerCase();
-    if (['content-security-policy','x-frame-options','alt-svc','connection','keep-alive','transfer-encoding'].includes(l)) continue;
-    resHeaders.set(k, v);
-  }
-  resHeaders.set('X-Content-Type-Options', 'nosniff');
+  const responseHeaders = new Headers(upstreamResponse.headers);
+  // Remove headers that would break the auth flow in the browser
+  responseHeaders.delete('Content-Security-Policy');
+  responseHeaders.delete('X-Frame-Options');
 
-  const ct = resHeaders.get('Content-Type') || '';
-  if (ct.includes('text/html') || ct.includes('javascript')) {
-    const body = await upstream.text();
-    return new Response(
-      body.replaceAll(`https://${authDomain}`, url.origin).replaceAll(`//${authDomain}`, `//${url.hostname}`),
-      { status: upstream.status, headers: resHeaders }
-    );
+  const contentType = responseHeaders.get('Content-Type') || '';
+  if (contentType.includes('text/html') || contentType.includes('javascript')) {
+    const body = await upstreamResponse.text();
+    // Rewrite all references from Firebase's domain back to our custom domain
+    const rewritten = body
+      .replaceAll(`https://${firebaseAuthDomain}`, url.origin)
+      .replaceAll(`//${firebaseAuthDomain}`,       `//${url.hostname}`);
+    return new Response(rewritten, {
+      status:  upstreamResponse.status,
+      headers: responseHeaders,
+    });
   }
 
-  return new Response(upstream.body, { status: upstream.status, headers: resHeaders });
+  return new Response(upstreamResponse.body, {
+    status:  upstreamResponse.status,
+    headers: responseHeaders,
+  });
 }
