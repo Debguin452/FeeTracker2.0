@@ -33,6 +33,13 @@ export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
+  // Auth proxy must pass through completely — the middleware must not touch these
+  // responses at all. Adding X-Frame-Options:DENY (or any header) to /__/auth/iframe
+  // breaks Firebase SDK's iframe-based session management, killing sign-in.
+  if (url.pathname.startsWith('/__/auth')) {
+    return next();
+  }
+
   if (
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/css/') ||
