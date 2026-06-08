@@ -12,54 +12,58 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg:#06060f; --surface:#0d0d1f; --surface2:#131328; --surface3:#1a1a35;
-      --border:rgba(255,255,255,.065); --border2:rgba(255,255,255,.11);
-      --accent:#7c6bff; --accent2:#ff6b9d; --accent3:#00d4aa; --accent4:#ff9a3c;
-      --accent-dim:rgba(124,107,255,.13);
-      --text:#eeeef8; --text2:#8a8ab5; --muted:#4a4a72;
-      --yellow:#ffd166; --red:#ff4d6d;
-      --r-xl:22px; --r-lg:15px; --r-md:11px; --r-sm:7px;
-      --card-shadow:0 1px 0 rgba(255,255,255,.04),0 4px 20px rgba(0,0,0,.3);
-    }
-    :root.light {
-      --bg:#f0f0f8; --surface:#ffffff; --surface2:#e8e8f4; --surface3:#d8d8ee;
-      --border:rgba(80,80,140,.09); --border2:rgba(80,80,140,.16);
-      --accent:#6255e8; --accent2:#e8527a; --accent3:#00b894; --accent4:#e07020;
-      --accent-dim:rgba(98,85,232,.12);
-      --text:#18182e; --text2:#4e4e82; --muted:#8888b2;
-      --yellow:#c48a00; --red:#d63050;
-    }
+    :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.065);--border2:rgba(255,255,255,.11);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent4:#ff9a3c;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--yellow:#ffd166;--red:#ff4d6d;--r-xl:22px;--r-lg:15px;--r-md:11px;--r-sm:7px;--card-shadow:0 1px 0 rgba(255,255,255,.04),0 4px 20px rgba(0,0,0,.3);}
+    :root.light{--bg:#f0f0f8;--surface:#ffffff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent4:#e07020;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--yellow:#c48a00;--red:#d63050;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;}
     input,textarea,select{user-select:text;-webkit-user-select:text;}
     @keyframes ftSlideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     @keyframes ftFadeIn{from{opacity:0}to{opacity:1}}
     @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @keyframes ftPop{0%{transform:scale(.9);opacity:0}70%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
 
-    /* ── TOPBAR ── */
+    /* Ambient blobs (mirror main page) */
+    .blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+    .blob1{width:600px;height:600px;top:-250px;left:-250px;background:radial-gradient(circle,rgba(124,107,255,.07),transparent 65%);}
+    .blob2{width:500px;height:500px;bottom:-200px;right:-200px;background:radial-gradient(circle,rgba(255,107,157,.05),transparent 65%);}
+    .blob3{width:300px;height:300px;top:40%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,212,170,.03),transparent 65%);}
+    :root.light .blob1{background:radial-gradient(circle,rgba(98,85,232,.06),transparent 65%);}
+    :root.light .blob2{background:radial-gradient(circle,rgba(232,82,122,.04),transparent 65%);}
+    :root.light .blob3{background:radial-gradient(circle,rgba(0,184,148,.03),transparent 65%);}
+
+    /* Loading screen */
+    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
+    .load-logo{width:52px;height:52px;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(124,107,255,.2);}
+
+    /* Login gate — styled to match main page login */
+    #loginGate{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;}
+    .gate-logo{width:80px;height:80px;border-radius:26px;overflow:hidden;box-shadow:0 8px 32px rgba(124,107,255,.2);margin-bottom:20px;animation:ftPop .5s ease both;}
+    .gate-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:8px;text-align:center;animation:ftSlideUp .4s .1s ease both;}
+    .gate-sub{font-size:14px;color:var(--text2);line-height:1.6;max-width:280px;margin-bottom:28px;text-align:center;animation:ftSlideUp .4s .18s ease both;}
+    .gate-btn{background:var(--accent);color:#fff;border:none;border-radius:16px;padding:15px 36px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(124,107,255,.35);transition:transform .15s,box-shadow .15s;animation:ftSlideUp .4s .26s ease both;}
+    .gate-btn:active{transform:scale(.97);}
+    .gate-note{font-size:12px;color:var(--muted);margin-top:14px;animation:ftFadeIn .5s .5s ease both;}
+
+    /* Topbar */
     .topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,16px) + 12px) 16px 12px;background:linear-gradient(180deg,var(--bg) 72%,transparent);animation:ftFadeIn .3s ease both;}
     .back-btn{width:38px;height:38px;border-radius:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,transform .12s;}
     .back-btn:active{transform:scale(.9);background:var(--surface3);}
     .topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.3px;flex:1;}
     .topbar-badge{background:var(--accent2);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:2px 7px;min-width:20px;text-align:center;}
 
-    /* ── MAIN ── */
-    .page{padding:calc(env(safe-area-inset-top,16px) + 66px) 0 32px;max-width:480px;margin:0 auto;}
+    /* Main page */
+    .page{position:relative;z-index:1;padding:calc(env(safe-area-inset-top,16px) + 66px) 0 40px;max-width:480px;margin:0 auto;}
     .section{padding:0 16px;margin-bottom:24px;animation:ftSlideUp .28s ease both;}
+    .sec-lbl{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 
-    /* ── SEARCH ── */
+    /* Search */
     .search-wrap{position:relative;margin-bottom:16px;}
     .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:flex;}
     .search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:11px 14px 11px 40px;font-size:14px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
     .search-input::placeholder{color:var(--muted);}
     .search-input:focus{border-color:rgba(124,107,255,.4);}
 
-    /* ── SECTION LABEL ── */
-    .sec-lbl{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-
-    /* ── TEACHER CARD (browse) ── */
+    /* Teacher card */
     .tc-card{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;animation:ftSlideUp .24s ease both;transition:border-color .15s,background .15s;}
     .tc-card:active{background:var(--surface2);}
     .tc-avatar{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#fff;flex-shrink:0;}
@@ -68,15 +72,13 @@
     .tc-meta{font-size:11px;color:var(--muted);}
     .tc-fee{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent3);flex-shrink:0;text-align:right;}
     .tc-fee-lbl{font-size:9px;color:var(--muted);text-align:right;}
-
-    /* ── REQUEST BUTTON ── */
     .req-btn{border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;flex-shrink:0;}
     .req-btn.primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(124,107,255,.3);}
     .req-btn.primary:active{transform:scale(.95);}
     .req-btn.sent{background:var(--surface2);color:var(--muted);border:1px solid var(--border);cursor:default;}
     .req-btn.connected{background:rgba(0,212,170,.12);color:var(--accent3);border:1px solid rgba(0,212,170,.25);cursor:default;}
 
-    /* ── MY PROFILE CARD (teacher) ── */
+    /* Teacher profile card */
     .profile-card{background:linear-gradient(135deg,rgba(124,107,255,.18),rgba(255,107,157,.1));border:1.5px solid rgba(124,107,255,.25);border-radius:22px;padding:20px;margin-bottom:16px;}
     .profile-card-top{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
     .profile-big-avatar{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent),#5240e0);flex-shrink:0;}
@@ -92,10 +94,17 @@
     .share-link-txt{flex:1;font-size:12px;color:var(--text2);font-family:monospace,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .copy-btn{background:var(--surface3);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:all .15s;}
     .copy-btn:active{background:var(--accent-dim);color:var(--accent);}
+    .profile-classes{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+    .profile-class-pill{background:var(--accent-dim);border:1px solid rgba(124,107,255,.22);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--accent);}
 
-    /* ── CODE CARD (teacher) ── */
+    /* FIX: Verification code card — was missing entirely */
+    .code-card{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:18px;margin-bottom:6px;}
+    .code-display{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:.2em;color:var(--accent);text-align:center;padding:14px 0 10px;background:var(--accent-dim);border-radius:12px;margin-bottom:12px;border:1px solid rgba(124,107,255,.18);}
+    .code-hint{font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.5;}
+    .code-regen{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;background:transparent;border:1.5px solid var(--border2);border-radius:11px;padding:9px 16px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+    .code-regen:active{background:var(--surface2);color:var(--accent);}
 
-    /* ── REQUEST ITEM (teacher incoming) ── */
+    /* Requests */
     .req-item{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;animation:ftSlideUp .24s ease both;}
     .req-item-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
     .req-student-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent2),#c040a0);flex-shrink:0;}
@@ -108,38 +117,31 @@
     .req-decline{flex:1;background:rgba(255,77,109,.08);color:var(--red);border:1.5px solid rgba(255,77,109,.2);border-radius:11px;padding:9px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;}
     .req-decline:active{background:rgba(255,77,109,.15);}
 
-    /* ── CONNECTION ITEM ── */
+    /* Connections */
     .conn-item{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;animation:ftSlideUp .24s ease both;}
     .conn-badge{font-size:10px;font-weight:700;border-radius:6px;padding:3px 7px;background:rgba(0,212,170,.12);color:var(--accent3);border:1px solid rgba(0,212,170,.25);margin-left:auto;flex-shrink:0;}
     .conn-badge.pending{background:rgba(255,154,60,.12);color:var(--accent4);border-color:rgba(255,154,60,.25);}
 
-    /* ── CLASS PILLS (teacher profile card) ── */
-    .profile-classes{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
-    .profile-class-pill{background:var(--accent-dim);border:1px solid rgba(124,107,255,.22);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--accent);}
+    /* Setup card */
+    .setup-card{background:linear-gradient(135deg,rgba(124,107,255,.13),rgba(0,212,170,.07));border:1.5px solid rgba(124,107,255,.2);border-radius:22px;padding:24px;text-align:center;margin-bottom:16px;}
+    .setup-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
+    .setup-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+    .setup-btn{background:var(--accent);color:#fff;border:none;border-radius:13px;padding:13px 24px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 4px 18px rgba(124,107,255,.35);}
+    .setup-btn:active{transform:scale(.97);}
 
-    /* ── CUSTOM BATCH INPUT ── */
+    /* Batch chips */
     .batch-add-row{display:flex;gap:7px;margin-bottom:10px;}
     .batch-add-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;padding:9px 12px;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
     .batch-add-input:focus{border-color:rgba(124,107,255,.4);}
     .batch-add-input::placeholder{color:var(--muted);}
     .batch-add-btn{background:var(--accent-dim);border:1.5px solid rgba(124,107,255,.3);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;flex-shrink:0;transition:all .15s;}
     .batch-add-btn:active{background:rgba(124,107,255,.2);}
-    .chip.removable{padding-right:7px;display:inline-flex;align-items:center;gap:5px;}
     .chip-remove{font-size:13px;line-height:1;opacity:.6;cursor:pointer;}
-    .chip-remove:hover{opacity:1;}
 
-    /* ── EMPTY HINT (student no teachers found) ── */
+    /* Hint */
     .empty-hint{font-size:12px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(124,107,255,.2);border-radius:12px;padding:10px 14px;margin-top:10px;line-height:1.6;text-align:center;}
 
-    /* ── SETUP CARD ── */
-    .setup-card{background:linear-gradient(135deg,rgba(124,107,255,.13),rgba(0,212,170,.07));border:1.5px solid rgba(124,107,255,.2);border-radius:22px;padding:24px;text-align:center;margin-bottom:16px;}
-    .setup-icon{font-size:40px;margin-bottom:12px;}
-    .setup-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
-    .setup-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
-    .setup-btn{background:var(--accent);color:#fff;border:none;border-radius:13px;padding:13px 24px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 4px 18px rgba(124,107,255,.35);}
-    .setup-btn:active{transform:scale(.97);}
-
-    /* ── MODAL ── */
+    /* Modal */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:200;display:flex;align-items:flex-end;justify-content:center;animation:ftFadeIn .15s ease;}
     .modal-overlay.hidden{display:none!important;}
     .modal-sheet{background:var(--surface);border:1px solid var(--border2);border-radius:22px 22px 0 0;padding:16px 18px calc(env(safe-area-inset-bottom,0px) + 32px);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
@@ -152,55 +154,56 @@
     .chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
     .chip{background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;}
     .chip.selected{background:rgba(0,212,170,.12);border-color:rgba(0,212,170,.35);color:var(--accent3);}
+    .chip.removable{display:inline-flex;align-items:center;gap:5px;padding-right:7px;}
     .btn-primary{width:100%;background:var(--accent);color:#fff;border:none;border-radius:13px;padding:14px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 4px 18px rgba(124,107,255,.3);margin-top:4px;}
     .btn-primary:active{transform:scale(.98);}
     .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
 
-    /* ── EMPTY STATE ── */
-    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px;}
-    
-    .empty-txt{font-size:14px;color:var(--muted);line-height:1.6;}
-
-    /* ── TABS ── */
+    /* Tabs */
     .tab-row{display:flex;background:var(--surface2);border-radius:14px;padding:3px;margin-bottom:20px;}
     .tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;border-radius:11px;cursor:pointer;color:var(--text2);transition:all .2s;}
     .tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2);}
 
-    /* ── SPINNER ── */
+    /* Spinner */
     .spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:32px auto;}
 
-    /* ── TOAST ── */
+    /* Toast */
     .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--surface2);border:1px solid var(--border2);border-radius:50px;padding:10px 22px;font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:999;white-space:nowrap;}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
     .toast.success{border-color:rgba(0,212,170,.35);color:var(--accent3);}
     .toast.error{border-color:rgba(255,77,109,.35);color:var(--red);}
 
-    /* ── HIDDEN UTILITY ── */
-    .hidden{display:none!important;}
+    /* Empty */
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px;}
+    .empty-txt{font-size:14px;color:var(--muted);line-height:1.6;}
 
-    /* ── LOADING SCREEN ── */
-    #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;flex-direction:column;gap:14px;}
-    .load-logo{width:52px;height:52px;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+    .hidden{display:none!important;}
     .load-txt{font-size:13px;color:var(--muted);}
   </style>
 </head>
 <body>
 
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<!-- Loading screen -->
 <div id="loadingScreen">
-  <div class="load-logo"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:52px;height:52px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:22px;font-weight:800;color:#fff';this.outerHTML='₹'"></div>
+  <div class="load-logo"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:52px;height:52px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:22px;font-weight:800;color:#fff;border-radius:16px;';this.outerHTML='&#8377;'"></div>
   <div class="spinner" style="margin:0;width:24px;height:24px;border-width:2.5px;"></div>
-  <div class="load-txt">Loading…</div>
+  <div class="load-txt">Loading&hellip;</div>
 </div>
 
-<!-- LOGIN GATE -->
-<div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;">
-  <div style="width:64px;height:64px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:64px;height:64px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:26px;font-weight:800;color:#fff';this.outerHTML='₹'"></div>
-  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);text-align:center;">Sign in to Connect</div>
-  <div style="font-size:14px;color:var(--muted);text-align:center;line-height:1.6;">You need to be signed in to Fee Tracker to use Connect.</div>
-  <button onclick="window.location.href='index.html'" style="background:var(--accent);color:#fff;border:none;border-radius:14px;padding:14px 32px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;">Go to Fee Tracker</button>
+<!-- Login gate -->
+<div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+  <div class="gate-logo"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:80px;height:80px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;';this.outerHTML='&#8377;'"></div>
+  <div class="gate-title">Sign in to Connect</div>
+  <div class="gate-sub">You need to be signed in to Fee Tracker to use Connect features.</div>
+  <button class="gate-btn" onclick="window.location.href='index.html'">Open Fee Tracker</button>
+  <div class="gate-note">Sign in there, then come back to Connect</div>
 </div>
 
-<!-- TOPBAR -->
+<!-- Topbar -->
 <div class="topbar" id="topbar" style="display:none;">
   <button class="back-btn" onclick="history.back()">
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -209,30 +212,25 @@
   <span class="topbar-badge hidden" id="pendingBadge">0</span>
 </div>
 
-<!-- MAIN PAGE -->
+<!-- Main page -->
 <div class="page" id="mainPage" style="display:none;">
 
   <!-- STUDENT VIEW -->
   <div id="studentView">
-    <!-- Tab row -->
     <div class="section">
       <div class="tab-row">
         <div class="tab active" id="tabBrowse" onclick="switchTab('browse')">Find Teachers</div>
         <div class="tab" id="tabMyConn" onclick="switchTab('myconn')">My Connections</div>
       </div>
     </div>
-
-    <!-- Browse tab -->
     <div id="browsePaneWrap" class="section">
       <div class="search-wrap">
         <span class="search-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-        <input class="search-input" id="teacherSearch" placeholder="Search by name or subject…" oninput="filterTeachers()" autocomplete="off" autocorrect="off" spellcheck="false"/>
+        <input class="search-input" id="teacherSearch" placeholder="Search by name or subject&hellip;" oninput="filterTeachers()" autocomplete="off" autocorrect="off" spellcheck="false"/>
       </div>
       <div class="sec-lbl">All Teachers</div>
       <div id="teacherListWrap"><div class="spinner"></div></div>
     </div>
-
-    <!-- My connections tab -->
     <div id="myConnPaneWrap" class="section" style="display:none;">
       <div class="sec-lbl">Connected Teachers</div>
       <div id="myConnListWrap"><div class="spinner"></div></div>
@@ -242,38 +240,30 @@
   <!-- TEACHER VIEW -->
   <div id="teacherView" style="display:none;">
     <div class="section">
-      <!-- No profile -->
       <div id="noProfileCard" style="display:none;">
         <div class="setup-card">
-          <div class="setup-icon-wrap" style="width:56px;height:56px;border-radius:18px;background:rgba(124,107,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--accent);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+          <div style="width:56px;height:56px;border-radius:18px;background:rgba(124,107,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--accent);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
           <div class="setup-title">Create Your Profile</div>
           <div class="setup-sub">Make your profile public so students can find and connect with you.</div>
           <button class="setup-btn" onclick="openProfileSetup()">Create Profile</button>
         </div>
       </div>
-
-      <!-- Has profile -->
       <div id="hasProfileCard" style="display:none;">
         <div class="profile-card" id="teacherProfileCard"></div>
-
-        <!-- Verification Code -->
+        <!-- FIX: code card now has proper CSS + loading logic -->
         <div class="sec-lbl" style="margin-top:16px;">Verification Code</div>
         <div class="code-card">
-          <div class="code-display" id="codeDisplay">——</div>
-          <div class="code-hint">Share this code with students to verify your identity</div>
+          <div class="code-display" id="codeDisplay">&mdash; &mdash; &mdash;</div>
+          <div class="code-hint">Share this 6-digit code with students to verify your identity.</div>
           <button class="code-regen" onclick="regenCode()">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 0 1 9.5-2M12 7a5 5 0 0 1-9.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 2.5V5H13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 9v2.5H.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Regenerate Code
           </button>
         </div>
-
-        <!-- Incoming Requests -->
         <div id="reqSection">
           <div class="sec-lbl" style="margin-top:16px;">Join Requests <span id="reqCount" style="color:var(--accent2);"></span></div>
           <div id="reqListWrap"><div class="spinner"></div></div>
         </div>
-
-        <!-- Connected Students -->
         <div id="studentsSection">
           <div class="sec-lbl" style="margin-top:16px;">Connected Students</div>
           <div id="connStudentsWrap"><div class="spinner"></div></div>
@@ -283,19 +273,18 @@
   </div>
 </div>
 
-<!-- PROFILE SETUP MODAL -->
+<!-- Profile Setup Modal -->
 <div class="modal-overlay hidden" id="profileSetupModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">Your Public Profile</div>
+    <div class="modal-title" id="profileSetupTitle">Your Public Profile</div>
     <label class="field-label">Full Name</label>
     <input class="field-input" id="setupName" placeholder="e.g. Mr. Roy"/>
     <label class="field-label">Subjects You Teach</label>
     <input class="field-input" id="setupSubject" placeholder="e.g. Mathematics, Physics"/>
     <label class="field-label">Batches / Classes</label>
     <div class="batch-add-row">
-      <input class="batch-add-input" id="batchInput" placeholder="Type a batch and press +" maxlength="30"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomBatch();}"/>
+      <input class="batch-add-input" id="batchInput" placeholder="Type a batch and press +" maxlength="30" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomBatch();}"/>
       <button class="batch-add-btn" onclick="addCustomBatch()">+</button>
     </div>
     <div class="chip-row" id="setupClassChips">
@@ -308,569 +297,393 @@
       <div class="chip" data-val="3rd Yr" onclick="toggleSetupChip(this)">3rd Yr</div>
       <div class="chip" data-val="Grad"   onclick="toggleSetupChip(this)">Grad</div>
     </div>
-    <label class="field-label">Monthly Fee (₹)</label>
+    <label class="field-label">Monthly Fee (&#8377;)</label>
     <input class="field-input" id="setupFee" type="number" placeholder="e.g. 800"/>
     <label class="field-label">Academic Session</label>
-    <input class="field-input" id="setupSession" placeholder="e.g. 2025–26"/>
+    <input class="field-input" id="setupSession" placeholder="e.g. 2025&#8211;26"/>
     <button class="btn-primary" id="saveProfileBtn" onclick="saveTeacherProfile()">Save Profile</button>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="js/theme.js"></script>
 <script type="module">
   import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
   import { getAuth, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import {
-    getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
-    updateDoc, deleteDoc, query, where, orderBy, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+  /* ── Firebase init ─────────────────────────────────────────────────────── */
   let auth, db;
   try {
-    const _cfgRes = await fetch('/api/config');
-    if (!_cfgRes.ok) throw new Error('Config ' + _cfgRes.status);
-    const _cfgData = await _cfgRes.json();
-    const _app = initializeApp(_cfgData.firebase.primary);
-    try {
-      initializeAppCheck(_app, { provider: new ReCaptchaV3Provider(_cfgData.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
-    } catch {}
-    auth = getAuth(_app);
-    db   = getFirestore(_app);
-  } catch (_e) {
-    console.error('[Connect] Init failed:', _e);
-    const _ls = document.getElementById('loadingScreen');
-    if (_ls) {
-      const _errEl = document.createElement('div');
-      _errEl.style.cssText = 'text-align:center;padding:40px 24px;';
-      _errEl.innerHTML =
-        '<div style="width:52px;height:52px;border-radius:18px;overflow:hidden;margin:0 auto 16px;">' +
-          '<img src="icons/icon-512.png" style="width:52px;height:52px;display:block;object-fit:cover;">' +
-        '</div>' +
-        '<div style="font-size:15px;font-weight:700;color:#ff4d6d;margin-bottom:8px;">Could not load configuration</div>' +
-        '<div style="font-size:13px;color:var(--muted,#8a8ab5);margin-bottom:20px;line-height:1.6;">' +
-          'Check your connection and reload.' +
-        '</div>' +
-        '<button onclick="location.reload()" ' +
-          'style="padding:12px 28px;border-radius:14px;background:var(--accent,#7c6bff);color:#fff;' +
-          'border:none;font-size:14px;font-weight:700;cursor:pointer;">Reload</button>';
-      _ls.innerHTML = '';
-      _ls.appendChild(_errEl);
-    }
-    throw _e;
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error('Config '+res.status);
+    const cfg = await res.json();
+    const app = initializeApp(cfg.firebase.primary);
+    try { initializeAppCheck(app,{provider:new ReCaptchaV3Provider(cfg.recaptchaSiteKey),isTokenAutoRefreshEnabled:true}); } catch{}
+    auth = getAuth(app);
+    db   = getFirestore(app);
+  } catch(e) {
+    console.error('[Connect] init failed:', e);
+    document.getElementById('loadingScreen').innerHTML =
+      '<div style="text-align:center;padding:40px 24px;">' +
+        '<div style="font-size:15px;font-weight:700;color:#ff4d6d;margin-bottom:8px;">Could not load config</div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Check your connection and reload.</div>' +
+        '<button onclick="location.reload()" style="padding:12px 28px;border-radius:14px;background:var(--accent);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;">Reload</button>' +
+      '</div>';
+    throw e;
   }
 
-  const profilesCol   = () => collection(db, 'profiles');
-  const profileDoc    = uid  => doc(db, 'profiles', uid);
-  const connectionsCol = ()  => collection(db, 'connections');
-  const connDoc       = id   => doc(db, 'connections', id);
+  /* ── Firestore refs ────────────────────────────────────────────────────── */
+  const profilesCol    = () => collection(db,'profiles');
+  const profileDoc     = uid => doc(db,'profiles',uid);
+  const connectionsCol = () => collection(db,'connections');
+  const connDoc        = id  => doc(db,'connections',id);
+  const codeDoc        = uid => doc(db,'codes',uid);
 
-  const _cmap={'en-IN':'INR','en-US':'USD','en-GB':'GBP','en-AU':'AUD','en-CA':'CAD','en-SG':'SGD','ja-JP':'JPY','ko-KR':'KRW','zh-CN':'CNY','de-DE':'EUR','fr-FR':'EUR','hi-IN':'INR','bn-IN':'INR','ar-SA':'SAR','ar-AE':'AED','pt-BR':'BRL','es-MX':'MXN','tr-TR':'TRY','ru-RU':'RUB'};
+  /* ── Currency ──────────────────────────────────────────────────────────── */
+  const _cm={'en-IN':'INR','en-US':'USD','en-GB':'GBP','hi-IN':'INR','bn-IN':'INR','ar-SA':'SAR','ar-AE':'AED'};
   const _ul=navigator.language||'en-IN';
-  const _uc=_cmap[_ul]||_cmap[Object.keys(_cmap).find(k=>k.startsWith(_ul.split('-')[0]+'-'))||'']||'INR';
-  function fmt(n){try{return new Intl.NumberFormat(_ul,{style:'currency',currency:_uc,maximumFractionDigits:0}).format(n);}catch(e){return '₹'+n;}}
+  const _uc=_cm[_ul]||_cm[Object.keys(_cm).find(k=>k.startsWith(_ul.split('-')[0]+'-'))||'']||'INR';
+  function fmt(n){try{return new Intl.NumberFormat(_ul,{style:'currency',currency:_uc,maximumFractionDigits:0}).format(n);}catch{return '&#8377;'+n;}}
 
-  let cu = null, myProfile = null, allTeachers = [], myConnections = [];
-  let _toastTimer = null;
+  /* ── State ─────────────────────────────────────────────────────────────── */
+  let cu=null, myProfile=null, allTeachers=[], myConnections=[];
+  let _toastTimer=null;
 
-  function toast(msg, type=''){
-    const t = document.getElementById('toast');
-    if(_toastTimer){ clearTimeout(_toastTimer); t.classList.remove('show'); void t.offsetWidth; }
-    t.textContent = msg; t.className = 'toast '+(type||'');
-    void t.offsetWidth; t.classList.add('show');
-    _toastTimer = setTimeout(()=>{ t.classList.remove('show'); _toastTimer=null; }, 2800);
+  /* ── Helpers ───────────────────────────────────────────────────────────── */
+  function toast(msg,type=''){
+    const t=document.getElementById('toast');
+    if(_toastTimer){clearTimeout(_toastTimer);t.classList.remove('show');void t.offsetWidth;}
+    t.textContent=msg;t.className='toast '+(type||'');
+    void t.offsetWidth;t.classList.add('show');
+    _toastTimer=setTimeout(()=>{t.classList.remove('show');_toastTimer=null;},2800);
   }
+  function setHTML(id,h){const el=document.getElementById(id);if(el)el.innerHTML=h;}
+  const COLORS=['#7c6bff','#ff6b9d','#00d4aa','#ff9a3c','#5a9eff','#c084fc'];
+  function avatarColor(n){let h=0;for(let c of n)h=(h<<5)-h+c.charCodeAt(0);return COLORS[Math.abs(h)%COLORS.length];}
+  function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+  function timeAgo(ts){if(!ts)return'';const s=Math.floor((Date.now()-(ts.toMillis?ts.toMillis():ts))/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
 
-  function hide(id){ const el=document.getElementById(id); if(el) el.classList.add('hidden'); }
-  function show(id){ const el=document.getElementById(id); if(el) el.classList.remove('hidden'); }
-  function setHTML(id,h){ const el=document.getElementById(id); if(el) el.innerHTML=h; }
+  /* ── Theme ─────────────────────────────────────────────────────────────── */
+  (function(){const s=localStorage.getItem('ft_theme');const dark=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(!dark)document.documentElement.classList.add('light');})();
 
-  const COLORS = ['#7c6bff','#ff6b9d','#00d4aa','#ff9a3c','#5a9eff','#c084fc'];
-  function avatarColor(name){ let h=0; for(let c of name) h=(h<<5)-h+c.charCodeAt(0); return COLORS[Math.abs(h)%COLORS.length]; }
-  function initials(name){ return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+  /* ── Auth ──────────────────────────────────────────────────────────────── */
+  const _cachedUid=localStorage.getItem('ft_uid');
+  let _settled=false;
+  setPersistence(auth,browserLocalPersistence).catch(()=>{});
 
-  function timeAgo(ts){
-    if(!ts) return '';
-    const s = Math.floor((Date.now()-(ts.toMillis ? ts.toMillis() : ts))/1000);
-    if(s<60) return 'just now';
-    if(s<3600) return Math.floor(s/60)+'m ago';
-    if(s<86400) return Math.floor(s/3600)+'h ago';
-    return Math.floor(s/86400)+'d ago';
-  }
-
-  (function(){
-    const saved=localStorage.getItem('ft_theme');
-    const dark = saved ? saved==='dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if(!dark) document.documentElement.classList.add('light');
-  })();
-
-  const _cachedUid = localStorage.getItem('ft_uid');
-  let _settled = false;
-  setPersistence(auth, browserLocalPersistence).catch(()=>{});
-
-  onAuthStateChanged(auth, async user => {
-    if (_settled) return;
-    _settled = true;
-    if (user) {
-      cu = user;
-      try { localStorage.setItem('ft_uid', user.uid); } catch(e) {}
-      await boot();
-    } else {
-      if (_cachedUid) { window.location.href = 'index.html'; return; }
-      hide('loadingScreen');
-      const lg = document.getElementById('loginGate');
-      lg.classList.remove('hidden');
-      lg.style.display = 'flex';
+  onAuthStateChanged(auth,async user=>{
+    if(_settled)return;_settled=true;
+    if(user){cu=user;try{localStorage.setItem('ft_uid',user.uid);}catch{}await boot();}
+    else{
+      if(_cachedUid){window.location.href='index.html';return;}
+      document.getElementById('loadingScreen').classList.add('hidden');
+      const lg=document.getElementById('loginGate');lg.classList.remove('hidden');lg.style.display='flex';
     }
   });
-
-  setTimeout(() => {
-    if (_settled) return;
-    _settled = true;
-    if (_cachedUid) { window.location.href = 'index.html'; }
-    else {
-      hide('loadingScreen');
-      const lg = document.getElementById('loginGate');
-      lg.classList.remove('hidden');
-      lg.style.display = 'flex';
+  setTimeout(()=>{
+    if(_settled)return;_settled=true;
+    if(_cachedUid){window.location.href='index.html';}
+    else{
+      document.getElementById('loadingScreen').classList.add('hidden');
+      const lg=document.getElementById('loginGate');lg.classList.remove('hidden');lg.style.display='flex';
     }
-  }, 5000);
+  },5000);
 
+  /* ── Boot ──────────────────────────────────────────────────────────────── */
   async function boot(){
-    hide('loadingScreen');
-    document.getElementById('topbar').style.display = '';
-    document.getElementById('mainPage').style.display = '';
-    try {
-      const snap = await getDoc(doc(db, 'users', cu.uid, 'meta', 'profile'));
-      if(snap.exists()) myProfile = snap.data();
-    } catch(e){ console.warn('profile load:', e.message); }
-
-    if(myProfile?.role === 'teacher'){
-      document.getElementById('teacherView').style.display = '';
-      document.getElementById('topbarTitle').textContent = 'Connect';
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('topbar').style.display='';
+    document.getElementById('mainPage').style.display='';
+    try{const snap=await getDoc(doc(db,'users',cu.uid,'meta','profile'));if(snap.exists())myProfile=snap.data();}
+    catch(e){console.warn('profile:',e.message);}
+    if(myProfile?.role==='teacher'){
+      document.getElementById('teacherView').style.display='';
+      document.getElementById('topbarTitle').textContent='Connect';
       await bootTeacher();
     } else {
-      document.getElementById('studentView').style.display = '';
-      document.getElementById('topbarTitle').textContent = 'Find Teachers';
+      document.getElementById('studentView').style.display='';
+      document.getElementById('topbarTitle').textContent='Find Teachers';
       await bootStudent();
       await handleJoinLink();
     }
   }
 
-  async function bootStudent(){
-    await Promise.all([loadAllTeachers(), loadMyConnections()]);
-    renderTeacherList();
-    renderMyConnections();
-  }
+  /* ── Student ───────────────────────────────────────────────────────────── */
+  async function bootStudent(){await Promise.all([loadAllTeachers(),loadMyConnections()]);renderTeacherList();renderMyConnections();}
+  async function loadAllTeachers(){try{const snap=await getDocs(query(profilesCol(),where('role','==','teacher')));allTeachers=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.warn('teachers:',e.message);allTeachers=[];}}
+  async function loadMyConnections(){try{const snap=await getDocs(query(connectionsCol(),where('studentId','==',cu.uid)));myConnections=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){console.warn('conns:',e.message);myConnections=[];}}
 
-  async function loadAllTeachers(){
-    try {
-      const snap = await getDocs(query(profilesCol(), where('role','==','teacher')));
-      allTeachers = snap.docs.map(d=>({id:d.id,...d.data()}));
-    } catch(e){ console.warn('teachers:', e.message); allTeachers=[]; }
-  }
-
-  async function loadMyConnections(){
-    try {
-      const snap = await getDocs(query(connectionsCol(), where('studentId','==',cu.uid)));
-      myConnections = snap.docs.map(d=>({id:d.id,...d.data()}));
-    } catch(e){ console.warn('conns:', e.message); myConnections=[]; }
-  }
-
-  window.filterTeachers = function(){
-    renderTeacherList();
-  };
+  window.filterTeachers=function(){renderTeacherList();};
 
   function renderTeacherList(){
-    const q = (document.getElementById('teacherSearch')?.value||'').toLowerCase().trim();
-    const filtered = allTeachers.filter(t=>{
-      if(!q) return true;
-      return (t.name||'').toLowerCase().includes(q) || (t.subject||'').toLowerCase().includes(q);
-    });
+    const q=(document.getElementById('teacherSearch')?.value||'').toLowerCase().trim();
+    const filtered=allTeachers.filter(t=>!q||(t.name||'').toLowerCase().includes(q)||(t.subject||'').toLowerCase().includes(q));
     if(!filtered.length){
-      if(q){
-        setHTML('teacherListWrap', `
-          <div class="empty">
-            <div class="empty-icon-wrap" style="width:52px;height:52px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);margin-bottom:4px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><line x1="15" y1="15" x2="21" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="8" y1="10" x2="12" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></svg></div>
-            <div class="empty-txt">No teacher found. Ask your teacher to add a profile on Fee Tracker.</div>
-            <div class="empty-hint">Ask your teacher to create a public profile on Fee Tracker so you can find and connect with them here.</div>
-          </div>`);
-      } else {
-        setHTML('teacherListWrap', `
-          <div class="empty">
-            <div class="empty-icon-wrap" style="width:52px;height:52px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);margin-bottom:4px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-            <div class="empty-txt">Ask your teacher to create a profile on Fee Tracker — they will appear here.</div>
-            <div class="empty-hint">Ask your teacher to open Fee Tracker → Connect and create their public profile so you can find them here.</div>
-          </div>`);
-      }
+      setHTML('teacherListWrap',q
+        ?`<div class="empty"><div class="empty-txt">No teachers found for "${q}"</div><div class="empty-hint">Ask your teacher to create a profile on Fee Tracker.</div></div>`
+        :`<div class="empty"><div class="empty-txt">No teachers yet</div><div class="empty-hint">Ask your teacher to open Fee Tracker &rarr; Connect and create their public profile.</div></div>`);
       return;
     }
-    const connMap = {};
-    myConnections.forEach(c=>{ connMap[c.teacherId]=c.status; });
-    setHTML('teacherListWrap', filtered.map(t=>{
-      const col = avatarColor(t.name||'T');
-      const ini = initials(t.name||'T');
-      const status = connMap[t.id];
-      let btn = '';
-      if(status==='active')
-        btn = `<button class="req-btn connected">Connected</button>`;
-      else if(status==='pending')
-        btn = `<button class="req-btn sent">Requested</button>`;
-      else
-        btn = `<button class="req-btn primary" onclick="sendRequest('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">Request</button>`;
-      return `<div class="tc-card">
-        <div class="tc-avatar" style="background:${col};">${ini}</div>
-        <div class="tc-info">
-          <div class="tc-name">${t.name||'—'}</div>
-          <div class="tc-meta">${[t.subject,t.classes?.join(', ')].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div>
-          <div class="tc-fee">${fmt((t.fee||0))}</div>
-          <div class="tc-fee-lbl">/month</div>
-        </div>
-        ${btn}
-      </div>`;
+    const connMap={};myConnections.forEach(c=>{connMap[c.teacherId]=c.status;});
+    setHTML('teacherListWrap',filtered.map(t=>{
+      const col=avatarColor(t.name||'T');const ini=initials(t.name||'T');const status=connMap[t.id];
+      const btn=status==='active'?`<button class="req-btn connected">Connected</button>`:status==='pending'?`<button class="req-btn sent">Requested</button>`:`<button class="req-btn primary" onclick="sendRequest('${t.id}','${(t.name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">Request</button>`;
+      return`<div class="tc-card"><div class="tc-avatar" style="background:${col};">${ini}</div><div class="tc-info"><div class="tc-name">${t.name||'&mdash;'}</div><div class="tc-meta">${[t.subject,t.classes?.join(', ')].filter(Boolean).join(' &middot; ')}</div></div><div><div class="tc-fee">${fmt(t.fee||0)}</div><div class="tc-fee-lbl">/month</div></div>${btn}</div>`;
     }).join(''));
   }
 
-  const _cWriteLocks = {};
-  async function _cWriteLock(key) {
-    while (_cWriteLocks[key]) { await new Promise(r => setTimeout(r, 80)); }
-    _cWriteLocks[key] = true;
-    return () => { delete _cWriteLocks[key]; };
-  }
-  const _cCooldowns = {};
-  function _cCooldown(key, ms) {
-    const now = Date.now();
-    if (_cCooldowns[key] && (now - _cCooldowns[key]) < ms) return false;
-    _cCooldowns[key] = now;
-    return true;
-  }
+  const _cwl={};async function _cWriteLock(k){while(_cwl[k]){await new Promise(r=>setTimeout(r,80));}_cwl[k]=true;return()=>{delete _cwl[k];};}
+  const _ccd={};function _cCooldown(k,ms){const n=Date.now();if(_ccd[k]&&n-_ccd[k]<ms)return false;_ccd[k]=n;return true;}
 
-  window.sendRequest = async function(teacherId, teacherName){
-    if (!_cCooldown('req_'+teacherId, 5000)) { toast('Please wait…', ''); return; }
-    const release = await _cWriteLock('req_'+teacherId);
-    const connId = cu.uid + '_' + teacherId;
-    const existing = myConnections.find(c=>c.teacherId===teacherId);
-    if(existing){ release(); toast('Request already sent',''); return; }
-    try {
-      await setDoc(connDoc(connId), {
-        studentId: cu.uid,
-        studentName: myProfile?.displayName || cu.displayName || 'Student',
-        studentClass: myProfile?.className || '',
-        teacherId,
-        teacherName,
-        status: 'pending',
-        createdAt: serverTimestamp()
-      });
-      myConnections.push({ id:connId, teacherId, status:'pending' });
-      toast(`Request sent to ${teacherName} ✓`, 'success');
-      renderTeacherList();
-    } catch(e){ toast('Failed: '+e.message, 'error'); }
-    finally { release(); }
+  window.sendRequest=async function(teacherId,teacherName){
+    if(!_cCooldown('req_'+teacherId,5000)){toast('Please wait&hellip;');return;}
+    const release=await _cWriteLock('req_'+teacherId);
+    const connId=cu.uid+'_'+teacherId;
+    if(myConnections.find(c=>c.teacherId===teacherId)){release();toast('Request already sent');return;}
+    try{
+      await setDoc(connDoc(connId),{studentId:cu.uid,studentName:myProfile?.displayName||cu.displayName||'Student',studentClass:myProfile?.className||'',teacherId,teacherName,status:'pending',createdAt:serverTimestamp()});
+      myConnections.push({id:connId,teacherId,status:'pending'});
+      toast('Request sent to '+teacherName+' \u2713','success');renderTeacherList();
+    }catch(e){toast('Failed: '+e.message,'error');}finally{release();}
   };
 
   function renderMyConnections(){
-    const active  = myConnections.filter(c=>c.status==='active');
-    const pending = myConnections.filter(c=>c.status==='pending');
-    if(!active.length && !pending.length){
-      setHTML('myConnListWrap', `<div class="empty"><div class="empty-icon-wrap" style="width:52px;height:52px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);margin-bottom:4px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="empty-txt">No connections yet. Find and request teachers.</div></div>`);
-      return;
-    }
-    const teacherMap = {};
-    allTeachers.forEach(t=>{ teacherMap[t.id]=t; });
-    const rows = [...active, ...pending].map(c=>{
-      const t = teacherMap[c.teacherId]||{};
-      const col = avatarColor(t.name||c.teacherName||'T');
-      const ini = initials(t.name||c.teacherName||'T');
-      const badge = c.status==='active'
-        ? `<span class="conn-badge">Connected</span>`
-        : `<span class="conn-badge pending">Pending</span>`;
-      return `<div class="conn-item">
-        <div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:12px;font-size:15px;">${ini}</div>
-        <div class="tc-info">
-          <div class="tc-name">${t.name||c.teacherName||'—'}</div>
-          <div class="tc-meta">${t.subject||''}</div>
-        </div>
-        ${badge}
-      </div>`;
-    }).join('');
-    setHTML('myConnListWrap', rows);
+    const active=myConnections.filter(c=>c.status==='active');const pending=myConnections.filter(c=>c.status==='pending');
+    if(!active.length&&!pending.length){setHTML('myConnListWrap','<div class="empty"><div class="empty-txt">No connections yet. Find and request teachers.</div></div>');return;}
+    const tmap={};allTeachers.forEach(t=>{tmap[t.id]=t;});
+    setHTML('myConnListWrap',[...active,...pending].map(c=>{
+      const t=tmap[c.teacherId]||{};const col=avatarColor(t.name||c.teacherName||'T');const ini=initials(t.name||c.teacherName||'T');
+      const badge=c.status==='active'?'<span class="conn-badge">Connected</span>':'<span class="conn-badge pending">Pending</span>';
+      return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:12px;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${t.name||c.teacherName||'&mdash;'}</div><div class="tc-meta">${t.subject||''}</div></div>${badge}</div>`;
+    }).join(''));
   }
 
-  window.switchTab = function(tab){
-    const isBrowse = tab==='browse';
-    document.getElementById('tabBrowse').className   = 'tab'+(isBrowse?' active':'');
-    document.getElementById('tabMyConn').className   = 'tab'+(!isBrowse?' active':'');
-    document.getElementById('browsePaneWrap').style.display  = isBrowse  ? '' : 'none';
-    document.getElementById('myConnPaneWrap').style.display  = !isBrowse ? '' : 'none';
+  window.switchTab=function(tab){
+    const b=tab==='browse';
+    document.getElementById('tabBrowse').className='tab'+(b?' active':'');
+    document.getElementById('tabMyConn').className='tab'+(!b?' active':'');
+    document.getElementById('browsePaneWrap').style.display=b?'':'none';
+    document.getElementById('myConnPaneWrap').style.display=!b?'':'none';
   };
 
+  /* ── Teacher ───────────────────────────────────────────────────────────── */
   async function bootTeacher(){
-    try {
-      const snap = await getDoc(profileDoc(cu.uid));
+    try{
+      const snap=await getDoc(profileDoc(cu.uid));
       if(snap.exists()){
-        const p = snap.data();
-        showTeacherProfile(p);
-        await Promise.all([loadRequests(), loadConnectedStudents()]);
+        showTeacherProfile(snap.data());
+        // FIX: load code, requests and students in parallel
+        await Promise.all([loadVerificationCode(),loadRequests(),loadConnectedStudents()]);
       } else {
-        document.getElementById('noProfileCard').style.display = '';
+        document.getElementById('noProfileCard').style.display='';
       }
-    } catch(e){ console.warn('teacher boot:', e.message); document.getElementById('noProfileCard').style.display=''; }
+    }catch(e){console.warn('teacher boot:',e.message);document.getElementById('noProfileCard').style.display='';}
   }
 
+  /* ── FIX: Was entirely missing — loads/auto-creates verification code ─── */
+  async function loadVerificationCode(){
+    try{
+      const snap=await getDoc(codeDoc(cu.uid));
+      if(snap.exists()){renderCode(snap.data().code||'');} 
+      else {
+        const nc=Math.floor(100000+Math.random()*900000).toString();
+        await setDoc(codeDoc(cu.uid),{code:nc,updatedAt:serverTimestamp()});
+        renderCode(nc);
+      }
+    }catch(e){console.warn('code:',e.message);document.getElementById('codeDisplay').textContent='&mdash; &mdash; &mdash;';}
+  }
+
+  function renderCode(code){
+    document.getElementById('codeDisplay').textContent=code.length===6?code.slice(0,3)+' '+code.slice(3):code;
+  }
+
+  /* ── FIX: Was entirely missing ─────────────────────────────────────────── */
+  window.regenCode=async function(){
+    if(!_cCooldown('regen',3000)){toast('Wait a moment&hellip;');return;}
+    const btn=document.querySelector('.code-regen');
+    if(btn){btn.disabled=true;btn.style.opacity='.5';}
+    try{
+      const nc=Math.floor(100000+Math.random()*900000).toString();
+      await setDoc(codeDoc(cu.uid),{code:nc,updatedAt:serverTimestamp()});
+      renderCode(nc);toast('New code generated \u2713','success');
+    }catch(e){toast('Failed: '+e.message,'error');}
+    finally{if(btn){btn.disabled=false;btn.style.opacity='';}}
+  };
+
   function showTeacherProfile(p){
-    document.getElementById('noProfileCard').style.display = 'none';
-    document.getElementById('hasProfileCard').style.display = '';
-    const col = avatarColor(p.name||'T');
-    const ini = initials(p.name||'T');
-    const url = `${location.origin}${location.pathname}?join=${cu.uid}`;
-    const classPills = (p.classes||[]).map(c=>`<span class="profile-class-pill">${c}</span>`).join('');
-    document.getElementById('teacherProfileCard').innerHTML = `
+    document.getElementById('noProfileCard').style.display='none';
+    document.getElementById('hasProfileCard').style.display='';
+    const col=avatarColor(p.name||'T');const ini=initials(p.name||'T');
+    const url=`${location.origin}${location.pathname}?join=${cu.uid}`;
+    const pills=(p.classes||[]).map(c=>`<span class="profile-class-pill">${c}</span>`).join('');
+    document.getElementById('teacherProfileCard').innerHTML=`
       <div class="profile-card-top">
-        <div class="profile-big-avatar" style="background:linear-gradient(135deg,${col},${col}cc);flex-shrink:0;">${ini}</div>
+        <div class="profile-big-avatar" style="background:linear-gradient(135deg,${col},${col}cc);">${ini}</div>
         <div style="flex:1;min-width:0;">
-          <div class="profile-card-name">${p.name||'—'}</div>
+          <div class="profile-card-name">${p.name||'&mdash;'}</div>
           <div class="profile-card-sub">${p.subject||''}</div>
-          ${classPills ? `<div class="profile-classes" style="margin-top:6px;">${classPills}</div>` : ''}
+          ${pills?`<div class="profile-classes">${pills}</div>`:''}
         </div>
       </div>
       <div class="profile-stat-row">
-        <div class="profile-stat">
-          <div class="profile-stat-val">${fmt((p.fee||0))}</div>
-          <div class="profile-stat-lbl">per month</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="connCount">—</div>
-          <div class="profile-stat-lbl">students</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val" id="pendingCount">—</div>
-          <div class="profile-stat-lbl">pending</div>
-        </div>
+        <div class="profile-stat"><div class="profile-stat-val">${fmt(p.fee||0)}</div><div class="profile-stat-lbl">per month</div></div>
+        <div class="profile-stat"><div class="profile-stat-val" id="connCount">&mdash;</div><div class="profile-stat-lbl">students</div></div>
+        <div class="profile-stat"><div class="profile-stat-val" id="pendingCount">&mdash;</div><div class="profile-stat-lbl">pending</div></div>
       </div>
       <button class="share-btn" onclick="shareProfile()">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 4.5a2 2 0 1 0 0-2 2 2 0 0 0 0 2zM5 8.5a2 2 0 1 0 0-2 2 2 0 0 0 0 2zM11 12.5a2 2 0 1 0 0-2 2 2 0 0 0 0 2z" stroke="currentColor" stroke-width="1.4"/><line x1="7" y1="7.4" x2="9.1" y2="5.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="7" y1="9.6" x2="9.1" y2="11.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Share My Profile
       </button>
-      <div class="share-link-row">
-        <span class="share-link-txt" id="shareLinkTxt">${url}</span>
-        <button class="copy-btn" onclick="copyLink()">Copy</button>
-      </div>
-      <div style="margin-top:12px;">
-        <button onclick="openProfileSetup(true)" style="background:transparent;border:1px solid var(--border2);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;width:100%;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5a2.121 2.121 0 0 1 3 3L5 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Edit Profile</button>
-      </div>
+      <div class="share-link-row"><span class="share-link-txt" id="shareLinkTxt">${url}</span><button class="copy-btn" onclick="copyLink()">Copy</button></div>
+      <div style="margin-top:12px;"><button onclick="openProfileSetup(true)" style="background:transparent;border:1px solid var(--border2);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5a2.121 2.121 0 0 1 3 3L5 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Edit Profile</button></div>
     `;
   }
-    } catch(e){ console.warn('code:', e.message); }
-  }
 
-  window.shareProfile = function(){
-    const url = `${location.origin}${location.pathname}?join=${cu.uid}`;
-    const snap = profileDoc(cu.uid);
-    const name = myProfile?.displayName || 'My Teacher';
-    const msg  = `Hi! I use Fee Tracker to manage fees. Connect with me here: ${url}`;
-    if(navigator.share){
-      navigator.share({ title:'Fee Tracker — Connect', text: msg }).catch(()=>{});
-    } else {
-      navigator.clipboard?.writeText(url).then(()=>toast('Link copied!','success'));
-    }
+  window.shareProfile=function(){
+    const url=`${location.origin}${location.pathname}?join=${cu.uid}`;
+    const msg=`Hi! I use Fee Tracker to manage fees. Connect with me here: ${url}`;
+    if(navigator.share){navigator.share({title:'Fee Tracker \u2014 Connect',text:msg}).catch(()=>{});}
+    else{navigator.clipboard?.writeText(url).then(()=>toast('Link copied!','success'));}
   };
-
-  window.copyLink = function(){
-    const url = document.getElementById('shareLinkTxt')?.textContent;
+  window.copyLink=function(){
+    const url=document.getElementById('shareLinkTxt')?.textContent;
     navigator.clipboard?.writeText(url).then(()=>toast('Link copied!','success'));
   };
 
   async function loadRequests(){
-    try {
-      const snap = await getDocs(query(connectionsCol(), where('teacherId','==',cu.uid), where('status','==','pending')));
-      const reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
-      const pendBadge = document.getElementById('pendingBadge');
-      const reqCountEl = document.getElementById('reqCount');
-      if(pendBadge){ if(reqs.length){ pendBadge.textContent=reqs.length; pendBadge.classList.remove('hidden'); } else pendBadge.classList.add('hidden'); }
-      if(reqCountEl) reqCountEl.textContent = reqs.length ? `(${reqs.length})` : '';
-      if(!reqs.length){
-        setHTML('reqListWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No pending requests</div></div>');
-        return;
-      }
-      setHTML('reqListWrap', reqs.map(r=>`
-        <div class="req-item" id="req_${r.id}">
-          <div class="req-item-top">
-            <div class="req-student-avatar">${initials(r.studentName||'S')}</div>
-            <div>
-              <div class="req-student-name">${r.studentName||'Student'}</div>
-              <div class="req-student-meta">${r.studentClass||''}</div>
-            </div>
-            <div class="req-time">${timeAgo(r.createdAt)}</div>
-          </div>
-          <div class="req-actions">
-            <button class="req-accept" onclick="acceptRequest('${r.id}','${r.studentId}','${(r.studentName||'Student').replace(/'/g,"\\'")}')">Accept</button>
-            <button class="req-decline" onclick="declineRequest('${r.id}')">Decline</button>
-          </div>
-        </div>`).join(''));
-    } catch(e){ console.warn('requests:', e.message); }
+    try{
+      const snap=await getDocs(query(connectionsCol(),where('teacherId','==',cu.uid),where('status','==','pending')));
+      const reqs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const pb=document.getElementById('pendingBadge');const rc=document.getElementById('reqCount');const pc=document.getElementById('pendingCount');
+      if(pb){if(reqs.length){pb.textContent=reqs.length;pb.classList.remove('hidden');}else pb.classList.add('hidden');}
+      if(rc)rc.textContent=reqs.length?`(${reqs.length})`:'';
+      if(pc)pc.textContent=reqs.length;
+      if(!reqs.length){setHTML('reqListWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No pending requests</div></div>');return;}
+      setHTML('reqListWrap',reqs.map(r=>`<div class="req-item" id="req_${r.id}"><div class="req-item-top"><div class="req-student-avatar">${initials(r.studentName||'S')}</div><div><div class="req-student-name">${r.studentName||'Student'}</div><div class="req-student-meta">${r.studentClass||''}</div></div><div class="req-time">${timeAgo(r.createdAt)}</div></div><div class="req-actions"><button class="req-accept" onclick="acceptRequest('${r.id}','${r.studentId}','${(r.studentName||'Student').replace(/'/g,"\\'")}')">Accept</button><button class="req-decline" onclick="declineRequest('${r.id}')">Decline</button></div></div>`).join(''));
+    }catch(e){console.warn('requests:',e.message);}
   }
 
-  window.acceptRequest = async function(connId, studentId, studentName){
-    if (!_cCooldown('accept_'+connId, 3000)) return;
-    const release = await _cWriteLock('accept_'+connId);
-    try {
-      await updateDoc(connDoc(connId), { status:'active', acceptedAt: serverTimestamp() });
-      const el = document.getElementById('req_'+connId);
-      if(el){ el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }
-      toast(`${studentName} connected ✓`,'success');
-      await loadConnectedStudents();
-    } catch(e){ toast('Failed: '+e.message,'error'); }
-    finally { release(); }
+  window.acceptRequest=async function(connId,studentId,studentName){
+    if(!_cCooldown('accept_'+connId,3000))return;
+    const release=await _cWriteLock('accept_'+connId);
+    try{
+      await updateDoc(connDoc(connId),{status:'active',acceptedAt:serverTimestamp()});
+      const el=document.getElementById('req_'+connId);
+      if(el){el.style.opacity='0';el.style.transform='translateX(20px)';el.style.transition='all .3s';setTimeout(()=>el.remove(),300);}
+      toast(studentName+' connected \u2713','success');await loadConnectedStudents();
+    }catch(e){toast('Failed: '+e.message,'error');}finally{release();}
   };
-
-  window.declineRequest = async function(connId){
-    if (!_cCooldown('decline_'+connId, 3000)) return;
-    const release = await _cWriteLock('decline_'+connId);
-    try {
+  window.declineRequest=async function(connId){
+    if(!_cCooldown('decline_'+connId,3000))return;
+    const release=await _cWriteLock('decline_'+connId);
+    try{
       await deleteDoc(connDoc(connId));
-      const el = document.getElementById('req_'+connId);
-      if(el){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }
-      toast('Request declined','');
-    } catch(e){ toast('Failed: '+e.message,'error'); }
-    finally { release(); }
+      const el=document.getElementById('req_'+connId);
+      if(el){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);}
+      toast('Request declined');
+    }catch(e){toast('Failed: '+e.message,'error');}finally{release();}
   };
 
   async function loadConnectedStudents(){
-    try {
-      const snap = await getDocs(query(connectionsCol(), where('teacherId','==',cu.uid), where('status','==','active')));
-      const conns = snap.docs.map(d=>({id:d.id,...d.data()}));
-      const countEl = document.getElementById('connCount');
-      if(countEl) countEl.textContent = conns.length;
-      if(!conns.length){
-        setHTML('connStudentsWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No connected students yet</div></div>');
-        return;
-      }
-      setHTML('connStudentsWrap', conns.map(c=>{
-        const col = avatarColor(c.studentName||'S');
-        const ini = initials(c.studentName||'S');
-        return `<div class="conn-item">
-          <div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:50%;font-size:15px;">${ini}</div>
-          <div class="tc-info">
-            <div class="tc-name">${c.studentName||'Student'}</div>
-            <div class="tc-meta">${c.studentClass||''}</div>
-          </div>
-          <span class="conn-badge">Active</span>
-        </div>`;
+    try{
+      const snap=await getDocs(query(connectionsCol(),where('teacherId','==',cu.uid),where('status','==','active')));
+      const conns=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const cc=document.getElementById('connCount');if(cc)cc.textContent=conns.length;
+      if(!conns.length){setHTML('connStudentsWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No connected students yet</div></div>');return;}
+      setHTML('connStudentsWrap',conns.map(c=>{
+        const col=avatarColor(c.studentName||'S');const ini=initials(c.studentName||'S');
+        return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:50%;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${c.studentName||'Student'}</div><div class="tc-meta">${c.studentClass||''}</div></div><span class="conn-badge">Active</span></div>`;
       }).join(''));
-    } catch(e){ console.warn('conn students:', e.message); }
+    }catch(e){console.warn('students:',e.message);}
   }
 
-  let _editMode = false;
-  const PRESET_CHIPS = ['Cls 9','Cls 10','Cls 11','Cls 12','1st Yr','2nd Yr','3rd Yr','Grad'];
+  /* ── Profile setup modal ───────────────────────────────────────────────── */
+  let _editMode=false;
+  const PRESET_CHIPS=['Cls 9','Cls 10','Cls 11','Cls 12','1st Yr','2nd Yr','3rd Yr','Grad'];
 
-  window.addCustomBatch = function(){
-    const input = document.getElementById('batchInput');
-    const val = (input.value||'').trim();
-    if(!val) return;
-    const existing = [...document.querySelectorAll('#setupClassChips .chip')].map(c=>c.dataset.val);
-    if(existing.includes(val)){ toast('Batch already added',''); input.value=''; return; }
-    const chip = document.createElement('div');
-    chip.className = 'chip selected removable';
-    chip.dataset.val = val;
-    chip.innerHTML = `${val}<span class="chip-remove" onclick="this.parentElement.remove()">×</span>`;
-    chip.onclick = function(e){ if(e.target.classList.contains('chip-remove')) return; chip.classList.toggle('selected'); };
-    document.getElementById('setupClassChips').appendChild(chip);
-    input.value = '';
-    input.focus();
+  window.addCustomBatch=function(){
+    const input=document.getElementById('batchInput');const val=(input.value||'').trim();
+    if(!val)return;
+    if([...document.querySelectorAll('#setupClassChips .chip')].map(c=>c.dataset.val).includes(val)){toast('Batch already added');input.value='';return;}
+    const chip=document.createElement('div');chip.className='chip selected removable';chip.dataset.val=val;
+    chip.innerHTML=`${val}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
+    chip.onclick=function(e){if(e.target.classList.contains('chip-remove'))return;chip.classList.toggle('selected');};
+    document.getElementById('setupClassChips').appendChild(chip);input.value='';input.focus();
   };
 
-  window.openProfileSetup = async function(edit=false){
-    _editMode = edit;
+  window.openProfileSetup=async function(edit=false){
+    _editMode=!!edit;
+    document.getElementById('profileSetupTitle').textContent=edit?'Edit Profile':'Your Public Profile';
     document.querySelectorAll('#setupClassChips .chip.removable').forEach(c=>c.remove());
     document.querySelectorAll('#setupClassChips .chip').forEach(ch=>ch.classList.remove('selected'));
-
     if(edit){
-      try {
-        const snap = await getDoc(profileDoc(cu.uid));
+      try{
+        const snap=await getDoc(profileDoc(cu.uid));
         if(snap.exists()){
-          const p = snap.data();
-          document.getElementById('setupName').value = p.name||'';
-          document.getElementById('setupSubject').value = p.subject||'';
-          document.getElementById('setupFee').value = p.fee||'';
-          document.getElementById('setupSession').value = p.session||'';
-          const saved = p.classes||[];
-          document.querySelectorAll('#setupClassChips .chip').forEach(ch=>{
-            ch.classList.toggle('selected', saved.includes(ch.dataset.val));
-          });
+          const p=snap.data();
+          document.getElementById('setupName').value=p.name||'';
+          document.getElementById('setupSubject').value=p.subject||'';
+          document.getElementById('setupFee').value=p.fee||'';
+          document.getElementById('setupSession').value=p.session||'';
+          const saved=p.classes||[];
+          document.querySelectorAll('#setupClassChips .chip').forEach(ch=>ch.classList.toggle('selected',saved.includes(ch.dataset.val)));
           saved.filter(c=>!PRESET_CHIPS.includes(c)).forEach(val=>{
-            const chip = document.createElement('div');
-            chip.className = 'chip selected removable';
-            chip.dataset.val = val;
-            chip.innerHTML = `${val}<span class="chip-remove" onclick="this.parentElement.remove()">×</span>`;
-            chip.onclick = function(e){ if(e.target.classList.contains('chip-remove')) return; chip.classList.toggle('selected'); };
+            const chip=document.createElement('div');chip.className='chip selected removable';chip.dataset.val=val;
+            chip.innerHTML=`${val}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
+            chip.onclick=function(e){if(e.target.classList.contains('chip-remove'))return;chip.classList.toggle('selected');};
             document.getElementById('setupClassChips').appendChild(chip);
           });
         }
-      } catch(e){}
+      }catch{}
     } else {
-      document.getElementById('setupName').value = '';
-      document.getElementById('setupSubject').value = '';
-      document.getElementById('setupFee').value = '';
-      document.getElementById('setupSession').value = '';
+      ['setupName','setupSubject','setupFee','setupSession'].forEach(id=>{document.getElementById(id).value='';});
     }
-    document.getElementById('batchInput').value = '';
+    document.getElementById('batchInput').value='';
     document.getElementById('profileSetupModal').classList.remove('hidden');
   };
 
-  window.toggleSetupChip = function(el){
-    el.classList.toggle('selected');
-  };
+  window.toggleSetupChip=function(el){el.classList.toggle('selected');};
 
-  window.saveTeacherProfile = async function(){
-    const btn = document.getElementById('saveProfileBtn');
-    const name    = document.getElementById('setupName').value.trim();
-    const subject = document.getElementById('setupSubject').value.trim();
-    const fee     = parseInt(document.getElementById('setupFee').value)||0;
-    const session = document.getElementById('setupSession').value.trim();
-    const classes = [...document.querySelectorAll('#setupClassChips .chip.selected')].map(c=>c.dataset.val);
-    if(!name){ toast('Enter your name','error'); return; }
-    if(!subject){ toast('Enter at least one subject','error'); return; }
-    btn.textContent='Saving…'; btn.disabled=true;
-    try {
-      const data = {
-        uid: cu.uid,
-        name, subject, fee, session, classes,
-        role: 'teacher',
-        email: cu.email||'',
-        displayName: myProfile?.displayName||cu.displayName||name,
-        updatedAt: serverTimestamp()
-      };
-      await setDoc(profileDoc(cu.uid), data, { merge:true });
+  window.saveTeacherProfile=async function(){
+    const btn=document.getElementById('saveProfileBtn');
+    const name=document.getElementById('setupName').value.trim();
+    const subject=document.getElementById('setupSubject').value.trim();
+    const fee=parseInt(document.getElementById('setupFee').value)||0;
+    const session=document.getElementById('setupSession').value.trim();
+    const classes=[...document.querySelectorAll('#setupClassChips .chip.selected')].map(c=>c.dataset.val);
+    if(!name){toast('Enter your name','error');return;}
+    if(!subject){toast('Enter at least one subject','error');return;}
+    btn.textContent='Saving\u2026';btn.disabled=true;
+    try{
+      const data={uid:cu.uid,name,subject,fee,session,classes,role:'teacher',email:cu.email||'',displayName:myProfile?.displayName||cu.displayName||name,updatedAt:serverTimestamp()};
+      await setDoc(profileDoc(cu.uid),data,{merge:true});
       document.getElementById('profileSetupModal').classList.add('hidden');
-      toast('Profile saved ✓','success');
+      toast('Profile saved \u2713','success');
       showTeacherProfile(data);
       document.getElementById('noProfileCard').style.display='none';
       document.getElementById('hasProfileCard').style.display='';
-      if(!_editMode) await Promise.all([loadRequests(), loadConnectedStudents()]);
-    } catch(e){ toast('Failed: '+e.message,'error'); }
-    btn.textContent='Save Profile'; btn.disabled=false;
+      if(!_editMode){await loadVerificationCode();await Promise.all([loadRequests(),loadConnectedStudents()]);}
+    }catch(e){toast('Failed: '+e.message,'error');}
+    btn.textContent='Save Profile';btn.disabled=false;
   };
 
   async function handleJoinLink(){
-    const joinTeacherId = new URLSearchParams(location.search).get('join');
-    if(!joinTeacherId || !cu || joinTeacherId === cu.uid) return;
-    try {
-      const snap = await getDoc(profileDoc(joinTeacherId));
-      if(!snap.exists()){ toast('Teacher profile not found','error'); return; }
-      const t = snap.data();
-      const inp = document.getElementById('teacherSearch');
-      if(inp){ inp.value = t.name||''; filterTeachers?.(); }
-      toast(`Showing ${t.name}'s profile`,'success');
-    } catch(e){}
+    const joinId=new URLSearchParams(location.search).get('join');
+    if(!joinId||!cu||joinId===cu.uid)return;
+    try{
+      const snap=await getDoc(profileDoc(joinId));
+      if(!snap.exists()){toast('Teacher profile not found','error');return;}
+      const t=snap.data();
+      const inp=document.getElementById('teacherSearch');
+      if(inp){inp.value=t.name||'';filterTeachers();}
+      toast('Showing '+t.name+"'s profile",'success');
+    }catch{}
   }
 
-  document.getElementById('profileSetupModal').addEventListener('click', function(e){
-    if(e.target === this) this.classList.add('hidden');
-  });
+  document.getElementById('profileSetupModal').addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 </script>
 </body>
 </html>
