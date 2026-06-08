@@ -2337,12 +2337,77 @@ async function bootApp(user) {
   }
 }
 
+// ── Auth error helpers ─────────────────────────────────────────────────────
+const _GOOGLE_BTN_HTML =
+  '<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
+
+function _authErrMsg(code) {
+  const m = {
+    'auth/unauthorized-domain':
+      `This domain is not authorised in Firebase.\n` +
+      `Go to Firebase Console → Authentication → Settings → Authorized domains\n` +
+      `and add: ${location.hostname}`,
+    'auth/operation-not-allowed':
+      'Google sign-in is not enabled.\n' +
+      'Go to Firebase Console → Authentication → Sign-in method → Google → Enable.',
+    'auth/invalid-api-key':
+      'Invalid Firebase API key. Check the FB1_API_KEY secret in Cloudflare Pages.',
+    'auth/network-request-failed':
+      'Network error — check your connection and try again.',
+    'auth/too-many-requests':
+      'Too many sign-in attempts. Wait a minute and try again.',
+    'auth/internal-error':
+      'Firebase internal error. Open DevTools (F12) → Console for details.',
+    'auth/popup-blocked':
+      'Popup blocked — switching to redirect sign-in…',
+    'auth/cancelled-popup-request':
+      null, // user opened sign-in again; silent
+    'auth/popup-closed-by-user':
+      null, // user closed popup; silent
+    'auth/user-cancelled':
+      null, // user dismissed; silent
+  };
+  return m[code] !== undefined ? m[code] : `Sign-in failed (${code || 'unknown'})`;
+}
+
+function _showAuthError(msg) {
+  if (!msg) return;
+  let el = document.getElementById('_authErrEl');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_authErrEl';
+    el.style.cssText =
+      'margin-top:12px;padding:12px 14px;border-radius:12px;font-size:12px;line-height:1.55;' +
+      'color:var(--red,#ff4d6d);background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.22);' +
+      'white-space:pre-wrap;word-break:break-word;text-align:left;';
+    const btn = document.getElementById('googleSignInBtn');
+    btn?.parentNode?.insertBefore(el, btn.nextSibling);
+  }
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+function _clearAuthError() {
+  const el = document.getElementById('_authErrEl');
+  if (el) el.style.display = 'none';
+}
+
+function _resetSignInBtn() {
+  const btn = document.getElementById('googleSignInBtn');
+  if (btn) { btn.innerHTML = _GOOGLE_BTN_HTML; btn.disabled = false; }
+  document.getElementById('avatarEl')?.classList.remove('loading');
+}
+
 setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
+// Handle redirect-based sign-in returning to the page
 getRedirectResult(auth).then(async r => {
-  if (r?.user) await bootApp(r.user);
+  if (r?.user) { _clearAuthError(); await bootApp(r.user); }
 }).catch(e => {
-  if (e.code && e.code !== 'auth/no-current-user') toast('Login error: '+e.code,'error');
+  const skip = ['auth/no-current-user', 'auth/null-user'];
+  if (!e.code || skip.includes(e.code)) return;
+  const msg = _authErrMsg(e.code);
+  if (msg) { _showAuthError(msg); _resetSignInBtn(); }
 });
 
 // Snapshot uid synchronously BEFORE any Firebase async code runs.
@@ -2459,30 +2524,46 @@ onAuthStateChanged(auth, async user => {
 
 document.getElementById('googleSignInBtn').addEventListener('click', async () => {
   const btn = document.getElementById('googleSignInBtn');
-  btn.innerHTML='<span class="btn-spinner"><span class="spinner-ring spinner-sm"></span>Signing in…</span>';
-  btn.disabled=true;
+  btn.innerHTML = '<span class="btn-spinner"><span class="spinner-ring spinner-sm"></span>Signing in\u2026</span>';
+  btn.disabled = true;
   document.getElementById('avatarEl')?.classList.add('loading');
+  _clearAuthError();
+
+  // Mobile browsers block popups reliably — go straight to redirect
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  async function tryRedirect(errFromPopup) {
+    // Show a transient toast for popup-blocked so the user knows what's happening
+    if (errFromPopup?.code === 'auth/popup-blocked') toast('Popup blocked — redirecting\u2026');
+    try {
+      await signInWithRedirect(auth, provider);
+      // page navigates away; getRedirectResult handles the result on return
+    } catch(re) {
+      const msg = _authErrMsg(re.code);
+      if (msg) _showAuthError(msg); else toast('Sign-in error: '+re.code,'error');
+      _resetSignInBtn();
+    }
+  }
+
+  if (isMobile) { await tryRedirect(); return; }
+
   try {
-    // Try popup first — fastest, no full-page redirect
     await signInWithPopup(auth, provider);
-    // onAuthStateChanged fires → bootApp handles the rest
+    // Success → onAuthStateChanged fires → bootApp handles it
+    _clearAuthError();
   } catch(e) {
-    if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
-      // Popup blocked (some mobile browsers) — fall back to redirect
-      try { await signInWithRedirect(auth, provider); }
-      catch(re) {
-        toast('Login failed: '+re.code,'error');
-        btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
-        btn.disabled=false;
-      }
-    } else if (e.code === 'auth/user-cancelled') {
-      btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
-      btn.disabled=false;
-      document.getElementById('avatarEl')?.classList.remove('loading');
+    const popupDismissed = ['auth/popup-closed-by-user','auth/cancelled-popup-request','auth/user-cancelled'];
+    const popupBlocked   = ['auth/popup-blocked'];
+
+    if (popupBlocked.includes(e.code)) {
+      await tryRedirect(e);
+    } else if (popupDismissed.includes(e.code)) {
+      // User closed or cancelled — silently reset
+      _resetSignInBtn();
     } else {
-      toast('Login failed: '+e.code,'error');
-      btn.innerHTML='<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
-      btn.disabled=false;
+      const msg = _authErrMsg(e.code);
+      if (msg) _showAuthError(msg); else toast('Sign-in failed: '+e.code,'error');
+      _resetSignInBtn();
     }
   }
 });
