@@ -1510,7 +1510,7 @@ function renderStudent(){
     <div id="cards-list">`;
 
   if(!Object.keys(teachers).length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http:
+    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">No teachers yet</div><div class="empty-sub">Tap <strong>+</strong> to add your first teacher and start tracking.</div></div>`;
     root.innerHTML=h; return;
   }
   const sorted=Object.keys(teachers).sort((a,b)=>calcDue(b)-calcDue(a)).filter(id=>{ const q=searchQ.toLowerCase(); return !q||teachers[id].name.toLowerCase().includes(q)||teachers[id].subject.toLowerCase().includes(q); });
@@ -1955,7 +1955,7 @@ function renderTeacher(){
   const subjLine=[subjs.length?subjs.join(', '):'No subjects set', classes.length?classes.join(', '):'', sess].filter(Boolean).join(' · ');
   let h=`
     ${!profile.displayName?`<div class="setup-banner" onclick="openProfileModal()"><span class="setup-banner-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><div class="setup-banner-text"><div class="setup-banner-title">Set up your teacher profile</div><div class="setup-banner-sub">Add your subjects and session</div></div><button class="setup-banner-btn">Set up</button></div>`:''}
-    <div class="teacher-mode-header" onclick="openTeacherDash()" style="cursor:pointer" title="Open Analytics"><div class="tmh-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="tmh-info"><div class="tmh-title">Teacher Dashboard</div><div class="tmh-sub">${subjLine}</div></div><div style="display:flex;align-items:center;color:var(--accent);opacity:.8;transition:opacity .2s;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http:
+    <div class="teacher-mode-header" onclick="openTeacherDash()" style="cursor:pointer" title="Open Analytics"><div class="tmh-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="tmh-info"><div class="tmh-title">Teacher Dashboard</div><div class="tmh-sub">${subjLine}</div></div><div style="display:flex;align-items:center;color:var(--accent);opacity:.8;transition:opacity .2s;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     <div class="search-wrap">
       <span class="search-icon" style="display:flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:block"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.7"/><line x1="10.5" y1="10.5" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
       <input class="search-input" type="text" placeholder="Search batch…" id="teacherSearchInp" value="${searchQ}" oninput="onSearch(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" />
@@ -2477,18 +2477,9 @@ setTimeout(async () => {
 // ── Last-resort: show login only for genuine new users ─────────────────
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
-  if (_cachedUidSnapshot) return; // was signed in before — never show login offline
-  const s = document.getElementById('splashSkeleton');
-  if (s && !s.classList.contains('fade-out')) {
-    hideSplash();
-    document.getElementById('loginScreen').classList.remove('hidden');
-    sbSetPage?.('login');
-    window._sbRefreshLayout?.();
-    const ls2 = document.getElementById('loginSkeleton');
-    const lc2 = document.getElementById('loginContent');
-    if (ls2) { ls2.classList.add('fade-out'); setTimeout(()=>{ ls2.classList.add('hidden'); if(lc2){lc2.style.opacity='1';lc2.style.pointerEvents='auto';lc2.classList.add('visible');} }, 420); }
-    else if (lc2) { lc2.style.opacity='1'; lc2.style.pointerEvents='auto'; lc2.classList.add('visible'); }
-  }
+  if (_cachedUidSnapshot) return; // was signed in before — never redirect offline
+  // No auth after 4 s → go to sign-in page
+  window.location.replace('./sign.html');
 }, 4000);
 
 // ── onAuthStateChanged ─────────────────────────────────────────────────
@@ -2498,27 +2489,18 @@ onAuthStateChanged(auth, async user => {
   } else {
     // Firebase fires null when offline — ignore if user was previously signed in
     if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting || (Date.now()-(_onlineSince||0)<12000))) return;
-    // Real sign-out — clear everything
+    // Real sign-out — clear cache and go to sign-in page
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
     try { localStorage.removeItem('ft_uid'); } catch(e){}
     try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
           idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
-    const _gb2 = document.getElementById('googleSignInBtn');
-    if (_gb2) {
-      _gb2.disabled = false;
-      _gb2.innerHTML = '<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continue with Google';
-    }
-    hideSplash();
-    document.getElementById('onboardScreen').classList.add('hidden');
-    document.getElementById('appScreen').classList.add('hidden');
-    document.getElementById('loginScreen').classList.remove('hidden');
-    sbSetPage?.('login');
-    window._sbRefreshLayout?.();
-    const ls=document.getElementById('loginSkeleton');
-    const lc=document.getElementById('loginContent');
-    if(ls){ ls.classList.add('fade-out'); setTimeout(()=>{ls.classList.add('hidden');if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}},420); }
-    else if(lc){lc.style.opacity='1';lc.style.pointerEvents='auto';lc.classList.add('visible');}
+    window.location.replace('./sign.html');
+    _offlineBooted = false; _reconnecting = false;
+    try { localStorage.removeItem('ft_uid'); } catch(e){}
+    try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
+          idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
+    window.location.replace('./sign.html');
   }
 });
 
@@ -2827,7 +2809,7 @@ function _syncMenuToggle() {
   const icon  = document.getElementById('menuThemeIcon');
   const inner = document.querySelector('#menuThemeLabel .lbl-inner');
   if (sw)    sw.classList.toggle('light-mode', !isDark);
-  if (icon)  icon.innerHTML = isDark ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http:
+  if (icon)  icon.innerHTML = isDark ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="3" x2="4.5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11.5" y1="11.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>` : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 9.5A6 6 0 016 2a6 6 0 000 12 6 6 0 007.5-4.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   if (inner) inner.textContent = isDark ? 'Dark Mode' : 'Light Mode';
 }
 
@@ -3290,7 +3272,7 @@ function _patchedRenderStudent(){
     <div class="section-label"><span class="section-label-txt">Teachers</span><span class="section-label-count" id="teachers-count">${Object.keys(teachers).length}</span></div>
     <div id="cards-list">`;
   if(!Object.keys(teachers).length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http:
+    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">No teachers yet</div><div class="empty-sub">Tap <strong>+</strong> to add your first teacher and start tracking.</div></div>`;
     root.innerHTML=h; return;
   }
   
@@ -3405,8 +3387,8 @@ async function loadAndRenderStandaloneStudents(root){
         </div>
         <div class="sc-actions">
           <div style="flex:1;padding:9px 13px;font-size:11px;color:var(--muted)">No batch assigned</div>
-          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http:
-          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http:
+          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="9" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>`;
     });
@@ -3518,7 +3500,7 @@ async function renderTeacherDash(){
   // destroyCharts called by close or open — not here (avoids double-destroy)
   const body=document.getElementById('teacherDashBody'); if(!body)return;
   const bKeys=Object.keys(batches);
-  if(!bKeys.length){ body.innerHTML='<div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http:
+  if(!bKeys.length){ body.innerHTML='<div class="dash-empty"><div class="dash-empty-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div class="dash-empty-txt">No batches yet.</div></div>'; return; }
   body.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">Loading…</div>';
   const allStats=await fetchAllBatchStats();
   const now=new Date(),curM=now.getMonth()+1,curY=now.getFullYear();
