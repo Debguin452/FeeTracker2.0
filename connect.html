@@ -199,7 +199,7 @@
   <div class="gate-logo"><img src="icons/icon-512.png" alt="Fee Tracker" style="width:80px;height:80px;display:block;object-fit:cover;" onerror="this.parentElement.style.cssText+=';background:linear-gradient(135deg,var(--accent),#5240e0);font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;';this.outerHTML='&#8377;'"></div>
   <div class="gate-title">Sign in to Connect</div>
   <div class="gate-sub">You need to be signed in to Fee Tracker to use Connect features.</div>
-  <button class="gate-btn" onclick="window.location.href='index.html'">Open Fee Tracker</button>
+  <button class="gate-btn" onclick="window.location.href='sign.html'">Open Fee Tracker</button>
   <div class="gate-note">Sign in there, then come back to Connect</div>
 </div>
 
@@ -378,14 +378,14 @@
     if(_settled)return;_settled=true;
     if(user){cu=user;try{localStorage.setItem('ft_uid',user.uid);}catch{}await boot();}
     else{
-      if(_cachedUid){window.location.href='index.html';return;}
+      if(_cachedUid){window.location.href='app.html';return;}
       document.getElementById('loadingScreen').classList.add('hidden');
       const lg=document.getElementById('loginGate');lg.classList.remove('hidden');lg.style.display='flex';
     }
   });
   setTimeout(()=>{
     if(_settled)return;_settled=true;
-    if(_cachedUid){window.location.href='index.html';}
+    if(_cachedUid){window.location.href='app.html';}
     else{
       document.getElementById('loadingScreen').classList.add('hidden');
       const lg=document.getElementById('loginGate');lg.classList.remove('hidden');lg.style.display='flex';

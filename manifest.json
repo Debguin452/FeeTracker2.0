@@ -1,8 +1,9 @@
 {
   "name": "Fee Tracker",
   "short_name": "Fee Tracker",
-  "description": "Smart fee tracking for students and teachers",
-  "start_url": "./",
+  "description": "Smart fee tracking for teachers and students",
+  "start_url": "./app.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#06060f",
   "theme_color": "#080812",
@@ -15,15 +16,15 @@
     {
       "name": "Add Payment",
       "short_name": "Pay",
-      "description": "Record a payment quickly",
-      "url": "./?action=add",
+      "description": "Record a fee payment",
+      "url": "./app.html?action=add",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "View Analytics",
+      "name": "Analytics",
       "short_name": "Stats",
-      "description": "Open your analytics dashboard",
-      "url": "./?action=dash",
+      "description": "Open analytics dashboard",
+      "url": "./app.html?action=dash",
       "icons": [{ "src": "icons/icon-512.png", "sizes": "512x512" }]
     }
   ],
