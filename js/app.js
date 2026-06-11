@@ -2241,6 +2241,7 @@ async function obSubmit(){
 let loaded = false;
 
 function hideSplash(){
+  if (typeof _skelKill !== 'undefined') try { clearTimeout(_skelKill); } catch {}
   const s=document.getElementById('splashSkeleton');
   if(s){ s.classList.add('fade-out'); setTimeout(()=>{ if(s.parentNode) s.parentNode.removeChild(s); },400); }
 }
@@ -2251,6 +2252,10 @@ async function bootApp(user) {
   _offlineBooted = false;
   showOfflineBanner(false);
   loaded = true; cu = user;
+
+  // Hard deadline — skeleton must be gone within 4s regardless of what
+  // happens below (slow Firestore, IDB block, any exception).
+  const _skelKill = setTimeout(hideSplash, 4000);
 
   db = _db1;
   try { localStorage.setItem('ft_uid', user.uid); } catch {}
