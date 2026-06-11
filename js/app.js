@@ -187,7 +187,7 @@ const prRef  = () => doc(db,'users',uid(),'meta','profile');
 const isT    = () => profile.role === 'teacher';
 
 const IDB_NAME  = 'fee-tracker-cache';
-const IDB_VER   = 2;   
+const IDB_VER   = 3;   
 const IDB_STORE = 'kv';
 
 const idbReady = new Promise((resolve, reject) => {
