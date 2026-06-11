@@ -49,26 +49,47 @@ let _idb = null;
 
 function openIDB() {
   if (_idb) return Promise.resolve(_idb);
+
   return new Promise((res, rej) => {
     const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+
     req.onupgradeneeded = ev => {
-      const db  = ev.target.result;
+      const db = ev.target.result;
       const old = ev.oldVersion;
-      if (!db.objectStoreNames.contains('kv'))             db.createObjectStore('kv');
-      if (!db.objectStoreNames.contains('batches_detail')) db.createObjectStore('batches_detail');
+
+      if (!db.objectStoreNames.contains('kv'))
+        db.createObjectStore('kv');
+
+      if (!db.objectStoreNames.contains('batches_detail'))
+        db.createObjectStore('batches_detail');
+
+      if (!db.objectStoreNames.contains('sw_meta'))
+        db.createObjectStore('sw_meta');
+
       if (old < 3) {
         if (!db.objectStoreNames.contains('sw_queue')) {
-          const qs = db.createObjectStore('sw_queue', { keyPath: 'id', autoIncrement: true });
-          qs.createIndex('by_ts',  'ts');
+          const qs = db.createObjectStore('sw_queue', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+
+          qs.createIndex('by_ts', 'ts');
           qs.createIndex('by_uid', 'uid');
         }
-        if (!db.objectStoreNames.contains('sw_meta')) db.createObjectStore('sw_meta');
       }
     };
-    req.onsuccess = ev => { _idb = ev.target.result; res(_idb); };
-    req.onerror   = ev => rej(ev.target.error);
+
+    req.onsuccess = ev => {
+      _idb = ev.target.result;
+      res(_idb);
+    };
+
+    req.onerror = ev => {
+      rej(ev.target.error);
+    };
   });
 }
+
 
 async function idbGet(store, key) {
   try {
