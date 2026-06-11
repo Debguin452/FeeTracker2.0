@@ -23,9 +23,18 @@
   </script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   <style>
-    /* Turnstile widget centering */
-    .ts-wrap{display:flex;justify-content:center;margin:4px 0 14px;}
-    .ts-wrap iframe{border-radius:8px!important;}
+    /* Turnstile widget — styled to match the card */
+    .ts-wrap{
+      display:flex;
+      justify-content:center;
+      margin:16px 0 4px;
+      padding:12px;
+      background:var(--surface2);
+      border:1.5px solid var(--border);
+      border-radius:14px;
+      transition:border-color .2s;
+    }
+    .ts-wrap iframe{border-radius:6px!important;display:block;}
   
     :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--red:#ff4d6d;}
     :root.light{--bg:#f0f0f8;--surface:#fff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--red:#d63050;}
@@ -243,6 +252,7 @@ function initTurnstile() {
   _tsWidgetId = turnstile.render('#tsWidget', {
     sitekey: TURNSTILE_SITE_KEY,
     theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
+    size: 'flexible',
     callback: (token) => { _tsToken = token; },
     'expired-callback': () => { _tsToken = null; },
     'error-callback': () => { _tsToken = null; },
