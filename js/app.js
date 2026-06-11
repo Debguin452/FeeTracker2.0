@@ -2477,10 +2477,10 @@ setTimeout(async () => {
 // ── Last-resort: redirect genuinely unauthenticated users ──────────────
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
-  // Stay put only if offline WITH a cached session (can still use cached data)
   if (_cachedUidSnapshot && !navigator.onLine) return;
-  window.location.replace('./sign.html');
-}, 5000);
+  console.error('Startup timeout');
+  return;
+}, 10000);
 
 // ── onAuthStateChanged ─────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
