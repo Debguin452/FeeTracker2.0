@@ -34,8 +34,6 @@ const _cfgPromise = _getConfig();
       const dataKey = k.replace(uid + '__', '');
       window.__SW_HYDRATE_MAP__[dataKey] = entry.value;
     });
-
-      '— keys:', Object.keys(window.__SW_HYDRATE_MAP__).join(', '));
   } catch (err) {
 
   }
@@ -2460,11 +2458,6 @@ setTimeout(async () => {
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
   if (_cachedUidSnapshot && !navigator.onLine) return;
-
-    loaded,
-    offlineBooted: _offlineBooted,
-    user: auth.currentUser?.uid
-  });
   return;
 }, 10000);
 
