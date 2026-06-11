@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v10';
+const CACHE_VERSION = 'ft-v11';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
@@ -43,7 +43,7 @@ const MAX_RUNTIME_AGE_MS  = 7 * 24 * 60 * 60 * 1000;
 const FLUSH_THROTTLE_MS   = 30_000;
 
 const IDB_NAME    = 'fee-tracker-cache';
-const IDB_VERSION = 3;
+const IDB_VERSION = 4;
 
 let _idb = null;
 
