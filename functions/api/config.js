@@ -1,4 +1,4 @@
-// Serves Firebase client config + Turnstile/reCAPTCHA site keys to the front-end.
+// Serves Firebase client config + Turnstile VAPID key to the front-end.
 // All secrets come from Cloudflare Pages environment variables — nothing is hardcoded.
 
 const ALLOWED_ORIGINS = [
@@ -36,7 +36,7 @@ export async function onRequest({ env, request }) {
 
   const required = [
     'FB1_API_KEY', 'FB1_PROJECT_ID', 'FB1_MESSAGING_SENDER_ID',
-    'FB1_APP_ID',  'RECAPTCHA_SITE_KEY', 'FCM_VAPID_KEY',
+    'FB1_APP_ID',  'FCM_VAPID_KEY',
   ];
   const missing = required.filter(k => !env[k]);
   if (missing.length) {
@@ -59,7 +59,6 @@ export async function onRequest({ env, request }) {
         appId:             env.FB1_APP_ID,
       },
     },
-    recaptchaSiteKey: env.RECAPTCHA_SITE_KEY,
     vapidKey:         env.FCM_VAPID_KEY,
   };
 
