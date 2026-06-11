@@ -1,28 +1,21 @@
-// ── /api/config ────────────────────────────────────────────────────────────
-// Serves the Firebase client config to the front-end.
-// All secrets come from Cloudflare Pages environment variables — nothing is
-// hardcoded here.
-//
-// To switch domains: update the ALLOWED_ORIGINS list below.
-// Test  → https://feetracker2.pages.dev
-// Prod  → https://feetracker.pages.dev
+// Serves Firebase client config + Turnstile/reCAPTCHA site keys to the front-end.
+// All secrets come from Cloudflare Pages environment variables — nothing is hardcoded.
 
 const ALLOWED_ORIGINS = [
-  'https://feetracker2.pages.dev',   // test
-  'https://feetracker.pages.dev',    // production (add when ready)
+  'https://feetracker2.pages.dev',
+  'https://feetracker.pages.dev',
 ];
 
 function corsOrigin(requestOrigin) {
-  if (!requestOrigin)                          return null; // same-origin fetch, no CORS needed
+  if (!requestOrigin) return null;
   if (ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  return null; // reject
+  return null;
 }
 
 export async function onRequest({ env, request }) {
   const reqOrigin = request.headers.get('Origin') || '';
   const allowed   = corsOrigin(reqOrigin);
 
-  // Block cross-origin requests from unlisted domains
   if (reqOrigin && !allowed) {
     return new Response(JSON.stringify({ error: 'Unauthorized origin' }), {
       status: 403,
@@ -37,28 +30,22 @@ export async function onRequest({ env, request }) {
     'Vary': 'Origin',
   } : {};
 
-  // ── Preflight ────────────────────────────────────────────────────────────
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { ...corsHeaders, 'Access-Control-Max-Age': '86400' } });
   }
 
-  // ── Check all required secrets are present ───────────────────────────────
   const required = [
     'FB1_API_KEY', 'FB1_PROJECT_ID', 'FB1_MESSAGING_SENDER_ID',
     'FB1_APP_ID',  'RECAPTCHA_SITE_KEY', 'FCM_VAPID_KEY',
   ];
   const missing = required.filter(k => !env[k]);
   if (missing.length) {
-    return new Response(JSON.stringify({ error: 'Server misconfiguration', missing }), {
+    return new Response(JSON.stringify({ error: 'Server misconfiguration' }), {
       status: 503,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...corsHeaders },
     });
   }
 
-  // ── authDomain is always the hostname serving this request ───────────────
-  // This makes the /__/auth proxy work on any domain without code changes:
-  //   feetracker2.pages.dev  →  authDomain = feetracker2.pages.dev
-  //   feetracker.pages.dev   →  authDomain = feetracker.pages.dev
   const authDomain = new URL(request.url).hostname;
 
   const config = {
@@ -80,7 +67,8 @@ export async function onRequest({ env, request }) {
     status: 200,
     headers: {
       'Content-Type':  'application/json',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
+      // No caching — Firebase config + site keys must not be cached by CDN or browser
+      'Cache-Control': 'no-store',
       ...corsHeaders,
     },
   });
