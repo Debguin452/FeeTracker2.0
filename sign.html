@@ -221,7 +221,6 @@
 
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 import {
   getAuth, onAuthStateChanged,
   GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
@@ -279,7 +278,6 @@ try {
   if (!res.ok) throw new Error('Config ' + res.status);
   const cfg = await res.json();
   const app = initializeApp(cfg.firebase.primary);
-  try { initializeAppCheck(app,{provider:new ReCaptchaV3Provider(cfg.recaptchaSiteKey),isTokenAutoRefreshEnabled:true}); } catch{}
   auth = getAuth(app);
   await setPersistence(auth, browserLocalPersistence).catch(()=>{});
 } catch(e) {
