@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v12';
+const CACHE_VERSION = 'ft-v13';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
@@ -301,6 +301,8 @@ self.addEventListener('fetch', event => {
   const isShell =
     url.pathname === '/' ||
     url.pathname.endsWith('index.html') ||
+    url.pathname.endsWith('app.html') ||
+    url.pathname.endsWith('sign.html') ||
     url.pathname === self.location.pathname.replace('sw.js', '');
 
   if (isShell) { event.respondWith(swrShell(request)); return; }
@@ -327,7 +329,11 @@ async function swrShell(request) {
     clearTimeout(tid);
     if (networkRes.ok) {
       cache.put(request, networkRes.clone());
-      cache.put('./index.html', networkRes.clone());
+      // Only alias as index.html for the root/index requests
+      const p = new URL(request.url).pathname;
+      if (p === '/' || p.endsWith('index.html')) {
+        cache.put('./index.html', networkRes.clone());
+      }
       return networkRes;
     }
   } catch { clearTimeout(tid); }
