@@ -1,8 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
-         query, where,
-         enableIndexedDbPersistence }
+import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
+         query, where }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -12,15 +10,10 @@ import { getMessaging, getToken, onMessage }
 let _cfg = null;
 async function _getConfig() {
   if (_cfg) return _cfg;
-  try { const c = localStorage.getItem('ft_cfg'); if (c) { _cfg = JSON.parse(c); _refreshConfig(); return _cfg; } } catch {}
   const r = await fetch('/api/config');
   if (!r.ok) throw new Error('Config fetch failed: ' + r.status);
   _cfg = await r.json();
-  try { localStorage.setItem('ft_cfg', JSON.stringify(_cfg)); } catch {}
   return _cfg;
-}
-function _refreshConfig() {
-  fetch('/api/config').then(r => r.ok ? r.json() : null).then(d => { if (d) { _cfg = d; try { localStorage.setItem('ft_cfg', JSON.stringify(d)); } catch {} } }).catch(() => {});
 }
 const _cfgPromise = _getConfig();
 
@@ -41,10 +34,10 @@ const _cfgPromise = _getConfig();
       const dataKey = k.replace(uid + '__', '');
       window.__SW_HYDRATE_MAP__[dataKey] = entry.value;
     });
-    console.log('[FeeTracker] SW hydration available for uid', uid,
+
       '— keys:', Object.keys(window.__SW_HYDRATE_MAP__).join(', '));
   } catch (err) {
-    console.warn('[FeeTracker] SW hydration apply failed:', err);
+
   }
 })();
 
@@ -81,23 +74,12 @@ clearTimeout(_safetyTid);
 
 const _app1 = initializeApp(cfg.firebase.primary, 'primary');
 
-try {
-  initializeAppCheck(_app1, { provider: new ReCaptchaV3Provider(cfg.recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
-} catch {}
-
-const _db1 = getFirestore(_app1);
+const _db1 = initializeFirestore(_app1, { localCache: persistentLocalCache() });
 
 let db = _db1;
 
 const auth = getAuth(_app1);
 const provider = new GoogleAuthProvider();
-
-function _enablePersistence(dbInstance) {
-  enableIndexedDbPersistence(dbInstance).catch(e => {
-    if (e.code !== 'failed-precondition' && e.code !== 'unimplemented') console.warn('[Firestore]', e.code);
-  });
-}
-_enablePersistence(_db1);
 
 let messaging = null;
 try { messaging = getMessaging(_app1); } catch {}
@@ -187,7 +169,7 @@ const prRef  = () => doc(db,'users',uid(),'meta','profile');
 const isT    = () => profile.role === 'teacher';
 
 const IDB_NAME  = 'fee-tracker-cache';
-const IDB_VER   = 3;   
+const IDB_VER   = 5;   
 const IDB_STORE = 'kv';
 
 const idbReady = new Promise((resolve, reject) => {
@@ -230,7 +212,7 @@ async function idbSet(k, v, store=IDB_STORE){
       r.onsuccess = () => res();
       r.onerror   = () => rej(r.error);
     });
-  } catch(e){ console.warn('IDB write failed', e); }
+  } catch {}
 }
 
 async function idbDel(k, store=IDB_STORE){
@@ -510,7 +492,7 @@ async function saveFCMToken(token) {
     
     const existing = await getDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId));
     if (existing.exists()) {
-      console.log('[FCM] Token already stored for this device');
+
       return;
     }
     await setDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId), {
@@ -559,8 +541,8 @@ async function saveFCMToken(token) {
       })(),
       createdAt: Date.now(),
     });
-    console.log('[FCM] Token saved for device:', deviceId);
-  } catch(e) { console.warn('[FCM] Token save failed:', e); }
+
+  } catch {}
 }
 
 async function refreshFCMTokenIfNeeded() {
@@ -580,11 +562,11 @@ async function refreshFCMTokenIfNeeded() {
     
     const sw    = await navigator.serviceWorker.ready;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
-    if (!token) { console.warn('[FCM] getToken returned empty'); return; }
+    if (!token) { return; }
     localStorage.setItem('ft_fcm_token', token);
     await saveFCMToken(token);
-    console.log('[FCM] New token created for existing user');
-  } catch(e) { console.warn('[FCM] Token refresh failed:', e); }
+
+  } catch {}
 }
 
 async function removeFCMToken() {
@@ -628,7 +610,7 @@ async function initNotifications() {
 
     updateNotifMenuLabel();
     window._checkDueReminder();
-  } catch(e) { console.warn('[Notif] Init failed:', e); }
+  } catch {}
 }
 
 async function checkDueReminder(force = false) {
@@ -730,7 +712,7 @@ async function loadProfile(){
       profile=s.data(); saveProfileToCache(profile);
       try { await idbSet('_profileSyncTs', Date.now()); } catch(e){}
     }
-  } catch(e){ console.warn('Profile fetch failed, using cache'); }
+  } catch {}
   updateRole();
 }
 function updateRole(){
@@ -830,7 +812,7 @@ async function saveProfile(){
     closeProfileModal(); toast('Profile saved','success');
     if(roleChanged){ teachers={}; batches={}; payments=[]; appRendered=false; }
     await loadAll();
-  } catch(e){ console.error(e); toast('Failed: '+e.message,'error'); }
+  } catch(e){ toast('Failed: '+e.message,'error'); }
   btn.textContent='Save Profile'; btn.disabled=false;
 }
 
@@ -937,7 +919,7 @@ async function loadAll(silent=false, force=false){
     try {
       const lastSync = await idbGet('_lastSyncTs');
       if (lastSync && (Date.now() - lastSync) < _SYNC_TTL) {
-        console.log('[Cache] Data fresh, skipping Firestore sync');
+
         if (!appRendered) render();
         appRendered = true;
         return;
@@ -965,7 +947,7 @@ async function loadAll(silent=false, force=false){
     
     try { await idbSet('_lastSyncTs', Date.now()); } catch(e){}
     showOfflineBanner(false); fetchOk=true;
-  } catch(e){ console.warn('Firestore sync failed, using cache:',e); if(!navigator.onLine) showOfflineBanner(true); }
+  } catch(e){ if(!navigator.onLine) showOfflineBanner(true); }
 
   if(isT() && fetchOk && Object.keys(batches).length > 0){
     Promise.all(Object.keys(batches).map(async bid => {
@@ -981,7 +963,7 @@ async function loadAll(silent=false, force=false){
         pSnap.docs.forEach(d=>{ pays.push({id:d.id,...d.data()}); });
         await idbSet(bid, {students:studs,payments:pays}, 'batches_detail');
       }catch(e){}
-    })).then(()=> console.log('[Cache] Batch details pre-cached (changed only)'));
+    })).then(() => {});
   }
 
   if(isT()) { try { await loadStandaloneStudents(); } catch(e){} }
@@ -1209,7 +1191,7 @@ async function _refreshConnectNotif() {
     const cls   = first.studentClass ? ` · ${first.studentClass}` : '';
     sub.textContent = `${first.studentName||'Student'}${cls}${extra} wants to join`;
     sub.classList.remove('hidden');
-  } catch(e) { console.warn('[ConnectNotif]', e.message); }
+  } catch {}
 }
 window._refreshConnectNotif = _refreshConnectNotif;
 
@@ -1670,7 +1652,7 @@ async function loadBatchDetail(bid){
     saveBatchDetailToCache(bid);
   } catch(e) {
     // Offline or fetch failed — try IDB cache
-    console.warn('[FeeTracker] Batch detail fetch failed, trying cache:', e.message);
+
     const cached = await loadBatchDetailFromCache(bid);
     if(cached){
       batchStudents = cached.students || {};
@@ -1802,7 +1784,7 @@ async function saveEditStudent(){
     batchStudents[_editStuSid]={...batchStudents[_editStuSid],...upd};
     closeEditStudentModal(); renderBatchDetail(_editStuBid);
     toast('Student updated \u2713','success');
-  }catch(e){console.error(e);toast('Failed: '+e.message,'error');}
+  }catch(e){toast('Failed: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Save Changes';
 }
 
@@ -2241,7 +2223,7 @@ async function obSubmit(){
     document.getElementById('appScreen').classList.remove('hidden');
     await loadAll();
     toast('Welcome, '+name.split(' ')[0]+'!','success');
-  } catch(e){ console.error(e); toast('Save failed: '+e.message,'error'); }
+  } catch(e){ toast('Save failed: '+e.message,'error'); }
   if(btn){ btn.disabled=false; btn.textContent='Get Started →'; }
 }
 
@@ -2308,7 +2290,7 @@ async function bootApp(user) {
         showNotifPrompt();
         refreshFCMTokenIfNeeded();
       }, 1500);
-    }).catch(e => console.warn('[Boot] bg refresh:', e));
+    }).catch(() => {});
 
   } else {
     // ── No cached profile — first login or cleared cache, must wait ──
@@ -2326,7 +2308,7 @@ async function bootApp(user) {
     } else {
       hideSplash();
       document.getElementById('appScreen').classList.remove('hidden');
-      try { await loadAll(false); } catch(e){ console.warn('[Boot] loadAll failed:', e); }
+      try { await loadAll(false); } catch {}
       _refreshConnectNotif().catch(()=>{});
       setTimeout(() => {
         initNotifications();
@@ -2478,7 +2460,7 @@ setTimeout(async () => {
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
   if (_cachedUidSnapshot && !navigator.onLine) return;
-  console.log('timeout state', {
+
     loaded,
     offlineBooted: _offlineBooted,
     user: auth.currentUser?.uid
@@ -3406,7 +3388,7 @@ async function loadAndRenderStandaloneStudents(root){
     if(old) old.remove();
     const appInner=document.getElementById('appInner');
     if(appInner) appInner.appendChild(section);
-  }catch(e){ console.warn('standalone load failed',e); }
+  }catch {}
 }
 
 window.deleteStandaloneStudent=async function(sid,name){
