@@ -2474,30 +2474,34 @@ setTimeout(async () => {
   }
 }, 1400);
 
-// ── Last-resort: show login only for genuine new users ─────────────────
+// ── Last-resort: redirect genuinely unauthenticated users ──────────────
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
-  if (_cachedUidSnapshot) return; // was signed in before — never redirect offline
-  // No auth after 4 s → go to sign-in page
+  // Stay put only if offline WITH a cached session (can still use cached data)
+  if (_cachedUidSnapshot && !navigator.onLine) return;
   window.location.replace('./sign.html');
-}, 4000);
+}, 5000);
 
 // ── onAuthStateChanged ─────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   if (user) {
     if (!loaded) await bootApp(user);
   } else {
+    // ── REDIRECT LOOP FIX ─────────────────────────────────────────────
+    // Firebase ALWAYS emits null synchronously on initialisation before it
+    // has finished reading the persisted token from IndexedDB.  If we act
+    // on that first null we clear ft_uid, redirect to sign.html, sign.html
+    // sees the still-valid Firebase session → redirects back → loop.
+    // Rule: if the app hasn't booted yet AND we have a cached UID, this is
+    // the "pre-load" null — wait for the real resolved state.
+    if (!loaded && _cachedUidSnapshot) return;
+
     // Firebase fires null when offline — ignore if user was previously signed in
     if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting || (Date.now()-(_onlineSince||0)<12000))) return;
     // Real sign-out — clear cache and go to sign-in page
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
-    try { localStorage.removeItem('ft_uid'); } catch(e){}
-    try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
-          idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
-    window.location.replace('./sign.html');
-    _offlineBooted = false; _reconnecting = false;
-    try { localStorage.removeItem('ft_uid'); } catch(e){}
+    try { localStorage.removeItem('ft_uid'); localStorage.setItem('ft_signed_out','1'); } catch(e){}
     try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
           idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
     window.location.replace('./sign.html');
