@@ -12,16 +12,21 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <script>
-    // If already signed in, skip this page entirely
+    // Already signed in → app
     try { if (localStorage.getItem('ft_uid')) location.replace('./app.html'); } catch(e){}
     // Theme
     try {
-      var _t = localStorage.getItem('ft_theme');
-      if (_t ? _t !== 'dark' : !window.matchMedia('(prefers-color-scheme:dark)').matches)
+      var t=localStorage.getItem('ft_theme');
+      if(t?t!=='dark':!window.matchMedia('(prefers-color-scheme:dark)').matches)
         document.documentElement.classList.add('light');
     } catch(e){}
   </script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   <style>
+    /* Turnstile widget centering */
+    .ts-wrap{display:flex;justify-content:center;margin:4px 0 14px;}
+    .ts-wrap iframe{border-radius:8px!important;}
+  </style>
     :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--red:#ff4d6d;}
     :root.light{--bg:#f0f0f8;--surface:#fff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--red:#d63050;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -150,6 +155,9 @@
       <input type="password" id="confirmInp" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doEmail()"/>
     </div>
 
+    <!-- Cloudflare Turnstile — bot protection for email/password flow -->
+    <div class="ts-wrap"><div id="tsWidget"></div></div>
+
     <button class="primary-btn" id="emailBtn" onclick="doEmail()">Sign In</button>
 
     <div class="link-row">
@@ -220,6 +228,49 @@ import {
   sendPasswordResetEmail, browserLocalPersistence, setPersistence
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+/* ── Turnstile ───────────────────────────────────────────────────────────── */
+const TURNSTILE_SITE_KEY = '0x4AAAAAADiGfoToJrkcuTCv';
+let _tsToken = null;
+let _tsWidgetId = null;
+
+function initTurnstile() {
+  if (typeof turnstile === 'undefined') {
+    // SDK not loaded yet — wait and retry
+    setTimeout(initTurnstile, 300);
+    return;
+  }
+  if (_tsWidgetId !== null) return;
+  _tsWidgetId = turnstile.render('#tsWidget', {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
+    callback: (token) => { _tsToken = token; },
+    'expired-callback': () => { _tsToken = null; },
+    'error-callback': () => { _tsToken = null; },
+  });
+}
+
+// Wait for DOM + Turnstile SDK
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTurnstile);
+} else {
+  initTurnstile();
+}
+
+async function verifyTurnstile() {
+  if (!_tsToken) return false;
+  try {
+    const res = await fetch('/api/verify-turnstile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _tsToken }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false; // network error — allow sign-in anyway (fail open)
+  }
+}
+
 /* ── Init ─────────────────────────────────────────────────────────────────── */
 let auth;
 try {
@@ -250,8 +301,13 @@ function redirect() {
 }
 
 /* ── Auth state: if already signed in → redirect immediately ─────────────── */
+let _redirected = false;
 onAuthStateChanged(auth, user => {
-  if (user) { try { localStorage.setItem('ft_uid', user.uid); } catch{} redirect(); }
+  if (user && !_redirected) {
+    _redirected = true;
+    try { localStorage.setItem('ft_uid', user.uid); localStorage.removeItem('ft_signed_out'); } catch{}
+    redirect();
+  }
 });
 
 /* ── Handle returning from signInWithRedirect ────────────────────────────── */
@@ -323,8 +379,24 @@ window.doEmail = async function() {
     if (pass.length < 6) { showErr('errBox', 'Password must be at least 6 characters.'); return; }
     if (pass !== confirm) { showErr('errBox', 'Passwords do not match.'); document.getElementById('confirmInp').focus(); return; }
   }
+
+  // ── Turnstile verification ─────────────────────────────────────────────
+  if (!_tsToken) {
+    showErr('errBox', 'Please complete the security check above.');
+    return;
+  }
   setBusy('emailBtn', true, _mode === 'signin' ? 'Sign In' : 'Create Account');
   document.getElementById('googleBtn').disabled = true;
+  const tsOk = await verifyTurnstile();
+  if (!tsOk) {
+    showErr('errBox', 'Security check failed. Please refresh and try again.');
+    setBusy('emailBtn', false, _mode === 'signin' ? 'Sign In' : 'Create Account');
+    document.getElementById('googleBtn').disabled = false;
+    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
+    _tsToken = null;
+    return;
+  }
+
   try {
     if (_mode === 'signin') {
       await signInWithEmailAndPassword(auth, email, pass);
@@ -334,9 +406,11 @@ window.doEmail = async function() {
     // onAuthStateChanged fires → redirects
   } catch(e) {
     const msg = errMsg(e.code);
-    if (msg) showErr('errBox', msg);
+    if (msg) showErr('errBox', msg); else toast('Sign-in failed: ' + e.code, 'error');
     setBusy('emailBtn', false, _mode === 'signin' ? 'Sign In' : 'Create Account');
     document.getElementById('googleBtn').disabled = false;
+    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
+    _tsToken = null;
   }
 };
 
