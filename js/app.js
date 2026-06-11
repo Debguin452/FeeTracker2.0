@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
          query, where }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
@@ -72,7 +72,7 @@ clearTimeout(_safetyTid);
 
 const _app1 = initializeApp(cfg.firebase.primary, 'primary');
 
-const _db1 = initializeFirestore(_app1, { localCache: persistentLocalCache() });
+const _db1 = initializeFirestore(_app1, { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }) });
 
 let db = _db1;
 
@@ -705,7 +705,8 @@ async function loadProfile(){
     }
   } catch(e) {  }
   try{
-    const s=await getDoc(prRef());
+    const _timeout = new Promise((_,rej) => setTimeout(() => rej(new Error('profile_timeout')), 5000));
+    const s=await Promise.race([getDoc(prRef()), _timeout]);
     if(s.exists()){
       profile=s.data(); saveProfileToCache(profile);
       try { await idbSet('_profileSyncTs', Date.now()); } catch(e){}
@@ -2423,43 +2424,42 @@ async function _bootFromCache(cachedUid, cachedProfile) {
   if (!navigator.onLine) showOfflineBanner(true);
 }
 
-// ── Primary offline boot — 200ms ──────────────────────────────────────
-// ONLY runs offline. Online = Firebase handles boot directly.
+// ── Offline boot — 600ms ──────────────────────────────────────────────
+// Fires only when offline. One timer is enough — 150ms is too fast for
+// IDB to respond, and 1400ms is needlessly slow. 600ms hits after IDB
+// resolves but before the user notices anything is wrong.
 setTimeout(async () => {
   if (navigator.onLine) return;
   if (loaded || _offlineBooted) return;
   if (!_cachedUidSnapshot) return;
-  const cachedProfile = await idbGet('profile').catch(()=>null) || LS.get('profile');
-  if (!cachedProfile || !cachedProfile.role) return;
-  await _bootFromCache(_cachedUidSnapshot, cachedProfile);
-}, 150);
-
-// ── Secondary offline boot — 1400ms ───────────────────────────────────
-// ONLY runs offline.
-setTimeout(async () => {
-  if (navigator.onLine) return;
-  if (loaded || _offlineBooted) return;
-  if (!_cachedUidSnapshot) return;
-  const cachedProfile = await idbGet('profile').catch(()=>null) || LS.get('profile');
+  const cachedProfile = await idbGet('profile').catch(() => null) || LS.get('profile');
   if (cachedProfile && cachedProfile.role) {
     await _bootFromCache(_cachedUidSnapshot, cachedProfile);
   } else {
+    // Offline, no cached profile — show "waiting for connection" shell
     _offlineBooted = true;
     hideSplash();
     document.getElementById('loginScreen')?.classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
-    if (!navigator.onLine) showOfflineBanner(true);
+    showOfflineBanner(true);
     const root = document.getElementById('appInner');
     if (root) root.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;padding:40px 24px;text-align:center;gap:16px;"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="var(--border2)" stroke-width="2"/><path d="M24 14v10l6 4" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);">Waiting for connection…</div><div style="font-size:13px;color:var(--muted);line-height:1.6;">Connect to the internet to load your data.</div></div>`;
   }
-}, 1400);
+}, 600);
 
 // ── Last-resort: redirect genuinely unauthenticated users ──────────────
+// Fires at 6s (not 10s) — if Firebase Auth hasn't resolved by then on a
+// live connection, something is broken. Guards:
+//   1. Already booted (loaded or offlineBooted) → skip
+//   2. Offline with a cached UID → skip (offline boot handles it)
+//   3. Firebase already knows the user (currentUser set) → skip; bootApp
+//      must still be running so don't interrupt it
 setTimeout(() => {
-  if (_offlineBooted || loaded) return;
+  if (loaded || _offlineBooted) return;
   if (_cachedUidSnapshot && !navigator.onLine) return;
-  return;
-}, 10000);
+  if (auth.currentUser) return;
+  location.replace('./sign.html');
+}, 6000);
 
 // ── onAuthStateChanged ─────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -2475,8 +2475,10 @@ onAuthStateChanged(auth, async user => {
     // the "pre-load" null — wait for the real resolved state.
     if (!loaded && _cachedUidSnapshot) return;
 
-    // Firebase fires null when offline — ignore if user was previously signed in
-    if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting || (Date.now()-(_onlineSince||0)<12000))) return;
+    // Firebase fires null when offline, or transiently during reconnect —
+    // ignore unless it's a genuine sign-out (online, not reconnecting, not
+    // mid offline-boot).
+    if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting)) return;
     // Real sign-out — clear cache and go to sign-in page
     cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
     _offlineBooted = false; _reconnecting = false;
