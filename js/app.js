@@ -2478,7 +2478,11 @@ setTimeout(async () => {
 setTimeout(() => {
   if (_offlineBooted || loaded) return;
   if (_cachedUidSnapshot && !navigator.onLine) return;
-  console.error('Startup timeout');
+  console.log('timeout state', {
+    loaded,
+    offlineBooted: _offlineBooted,
+    user: auth.currentUser?.uid
+  });
   return;
 }, 10000);
 
