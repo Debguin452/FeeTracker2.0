@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
+import { initializeFirestore, persistentLocalCache, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc,
          query, where }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence }
@@ -72,7 +72,7 @@ clearTimeout(_safetyTid);
 
 const _app1 = initializeApp(cfg.firebase.primary, 'primary');
 
-const _db1 = initializeFirestore(_app1, { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) }) });
+const _db1 = initializeFirestore(_app1, { localCache: persistentLocalCache() });
 
 let db = _db1;
 
@@ -2448,16 +2448,13 @@ setTimeout(async () => {
 }, 600);
 
 // ── Last-resort: redirect genuinely unauthenticated users ──────────────
-// Fires at 6s (not 10s) — if Firebase Auth hasn't resolved by then on a
-// live connection, something is broken. Guards:
-//   1. Already booted (loaded or offlineBooted) → skip
-//   2. Offline with a cached UID → skip (offline boot handles it)
-//   3. Firebase already knows the user (currentUser set) → skip; bootApp
-//      must still be running so don't interrupt it
+// Only fires when there is NO cached UID at all — meaning the user was
+// never signed in on this device. If _cachedUidSnapshot exists, Firebase
+// Auth is still resolving (or offline) — do not redirect or we get a loop.
 setTimeout(() => {
   if (loaded || _offlineBooted) return;
-  if (_cachedUidSnapshot && !navigator.onLine) return;
-  if (auth.currentUser) return;
+  if (_cachedUidSnapshot) return;          // has cached UID — wait, never redirect
+  if (auth.currentUser) return;            // auth resolved — bootApp is running
   location.replace('./sign.html');
 }, 6000);
 
