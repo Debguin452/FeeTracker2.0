@@ -185,6 +185,9 @@ const idbReady = new Promise((resolve, reject) => {
   };
   req.onsuccess = e => resolve(e.target.result);
   req.onerror   = e => reject(e.target.error);
+  // Another tab is holding the old DB version open — don't hang forever.
+  // Reject after 3s so idbGet/idbSet fall back to LS gracefully.
+  req.onblocked = () => setTimeout(() => reject(new Error('idb_blocked')), 3000);
 });
 
 function idbKey(k){ return `${getCacheUid()}__${k}`; }
@@ -254,10 +257,18 @@ function loadFromCache(){
 async function loadFromCacheAsync(){
   
   const swm = window.__SW_HYDRATE_MAP__ || {};
-  const [ct,cp,cb,cpr,css] = await Promise.all([
-    idbGet('teachers'), idbGet('payments'), idbGet('batches'),
-    idbGet('profile'), idbGet('standalone_students')
+
+  // Race IDB reads against a 2s timeout — if IDB is blocked (another tab
+  // holding the old version), fall through immediately to LS/SW fallbacks.
+  const _idbTimeout = new Promise(r => setTimeout(() => r([null,null,null,null,null]), 2000));
+  const [ct,cp,cb,cpr,css] = await Promise.race([
+    Promise.all([
+      idbGet('teachers'), idbGet('payments'), idbGet('batches'),
+      idbGet('profile'), idbGet('standalone_students')
+    ]),
+    _idbTimeout
   ]);
+
   if(ct)        teachers=ct;
   else if(swm.teachers) teachers=swm.teachers;
   else { const v=LS.get('teachers'); if(v) teachers=v; }
