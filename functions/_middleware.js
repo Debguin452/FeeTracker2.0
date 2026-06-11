@@ -1,31 +1,19 @@
-// ── Cloudflare Pages middleware ────────────────────────────────────────────
-// Runs on every request before the specific function handler.
-// Responsibilities:
-//   1. Pass /__/auth/* straight through (no modifications — Firebase auth proxy)
-//   2. Skip security headers for static assets
-//   3. Rate-limit all other routes
-//   4. Enforce origin lock on /api/* routes
-//   5. Add security headers to all responses
+const RL_WINDOW_MS = 60_000;
+const RL_GLOBAL    = 120;
+const RL_AUTH      = 30;
+const RL_CONFIG    = 20;
 
-// ── Rate limits ────────────────────────────────────────────────────────────
-const RL_WINDOW_MS   = 60_000;
-const RL_GLOBAL      = 120;
-const RL_AUTH        = 30;
-const RL_CONFIG      = 20;
-
-// ── Allowed origins (same list as api/config.js) ───────────────────────────
-// Swap feetracker2 → feetracker when going to production.
 const ALLOWED_ORIGINS = [
   'https://feetracker2.pages.dev',
   'https://feetracker.pages.dev',
 ];
 
 function getClientKey(request) {
-  const ip  = request.headers.get('CF-Connecting-IP')
+  const ip = request.headers.get('CF-Connecting-IP')
     || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
     || 'unknown';
   const url = new URL(request.url);
-  const bucket = url.pathname.startsWith('/__/auth')   ? 'auth'
+  const bucket = url.pathname.startsWith('/__/auth')    ? 'auth'
                : url.pathname.startsWith('/api/config') ? 'cfg'
                : 'global';
   return `rl:${ip}:${bucket}`;
@@ -52,28 +40,24 @@ export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
-  // ── 1. Auth proxy — must pass completely untouched ─────────────────────
-  // Any header added here (X-Frame-Options, CSP, etc.) would break the
-  // Firebase SDK's iframe session manager and kill sign-in.
+  // Auth proxy — pass untouched; adding headers here breaks Firebase's iframe/popup flow
   if (url.pathname.startsWith('/__/auth')) {
     return next();
   }
 
-  // ── 2. Static assets — skip rate-limit & security headers ──────────────
+  // Static assets — skip rate-limit and security headers
   const isStatic =
-    url.pathname.startsWith('/icons/')    ||
-    url.pathname.startsWith('/css/')      ||
-    url.pathname.startsWith('/js/')       ||
-    url.pathname === '/manifest.json'     ||
-    url.pathname === '/sw.js'             ||
-    url.pathname === '/robots.txt'        ||
+    url.pathname.startsWith('/icons/')  ||
+    url.pathname.startsWith('/css/')    ||
+    url.pathname.startsWith('/js/')     ||
+    url.pathname === '/manifest.json'   ||
+    url.pathname === '/sw.js'           ||
+    url.pathname === '/robots.txt'      ||
     url.pathname === '/sitemap.xml';
 
   if (isStatic) return next();
 
-  // ── 3. Origin lock for /api/* routes ───────────────────────────────────
-  // Block cross-origin requests from domains not in ALLOWED_ORIGINS.
-  // Same-origin fetches (no Origin header) are always allowed.
+  // Origin lock for /api/* routes
   if (url.pathname.startsWith('/api/')) {
     const reqOrigin = request.headers.get('Origin');
     if (reqOrigin && !ALLOWED_ORIGINS.includes(reqOrigin)) {
@@ -84,7 +68,7 @@ export async function onRequest(context) {
     }
   }
 
-  // ── 4. Rate limiting ────────────────────────────────────────────────────
+  // Rate limiting
   const { allowed } = await checkRateLimit(
     env,
     getClientKey(request),
@@ -99,18 +83,19 @@ export async function onRequest(context) {
         'Retry-After':        '60',
         'X-RateLimit-Limit':  String(getLimit(url.pathname)),
         'X-RateLimit-Window': '60',
+        'Cache-Control':      'no-store',
       },
     });
   }
 
-  // ── 5. Security headers ─────────────────────────────────────────────────
+  // Security headers on all non-static responses
   const response   = await next();
   const secHeaders = new Headers(response.headers);
 
-  secHeaders.set('X-Content-Type-Options',  'nosniff');
-  secHeaders.set('X-Frame-Options',         'DENY');
-  secHeaders.set('Referrer-Policy',         'strict-origin-when-cross-origin');
-  secHeaders.set('Permissions-Policy',      'geolocation=(), microphone=(), camera=()');
+  secHeaders.set('X-Content-Type-Options', 'nosniff');
+  secHeaders.set('X-Frame-Options',        'DENY');
+  secHeaders.set('Referrer-Policy',        'strict-origin-when-cross-origin');
+  secHeaders.set('Permissions-Policy',     'geolocation=(), microphone=(), camera=()');
 
   if (url.pathname.startsWith('/api/')) {
     secHeaders.set('Cache-Control', 'no-store');
