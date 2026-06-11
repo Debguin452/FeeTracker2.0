@@ -155,7 +155,10 @@
     @media(max-width:600px){
       .stats-grid{grid-template-columns:1fr 1fr;}
       .float-chip.tl,.float-chip.tr,.float-chip.bl{display:none;}
-      .mockup-wrap{width:230px;}
+      .mockup-wrap{
+    width:min(380px,98vw);
+    margin-top:20px;
+      }
     }
     @media(max-width:400px){.stats-grid{grid-template-columns:1fr;}}
   </style>
