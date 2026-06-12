@@ -2545,7 +2545,6 @@ function _doSignOutCleanup() {
   try { localStorage.removeItem('ft_uid'); localStorage.setItem('ft_signed_out','1'); } catch(e){}
   try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
         idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
-  window.location.replace('./sign.html');
 }
 window.doSignOut=async function(){
   try{
@@ -2553,16 +2552,12 @@ window.doSignOut=async function(){
     window._clearSWCache?.();
     _doSignOutCleanup();
     await signOut(auth);
-  }catch(e){ toast('Sign out failed: '+e.message,'error'); }
+  }catch(e){ toast('Sign out failed: '+e.message,'error'); return; }
+  window.location.replace('./sign.html');
 };
 document.getElementById('signOutBtn').addEventListener('click', async () => {
   closeMenu();
-  try{
-    _reconnecting = false;
-    window._clearSWCache?.();
-    _doSignOutCleanup();
-    await signOut(auth);
-  }catch(e){ toast('Sign out failed: '+e.message,'error'); }
+  await window.doSignOut();
 });
 document.getElementById('editProfileBtn').addEventListener('click',()=>openProfileModal());
 document.getElementById('addBtn').addEventListener('click',openAddModal);

@@ -17,7 +17,7 @@
     const label = document.getElementById('themeToggleLabel');
     const knob  = document.getElementById('themeToggleKnob');
     const sw    = document.getElementById('themeToggleSwitch');
-    if (!icon) return;
+    if (!icon || !label || !knob) return;
     icon.textContent  = isDark ? '🌙' : '☀️';
     label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
     knob.style.left   = isDark ? '25px' : '3px';
