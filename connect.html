@@ -378,7 +378,11 @@
     if(_settled)return;_settled=true;
     if(user){cu=user;try{localStorage.setItem('ft_uid',user.uid);}catch{}await boot();}
     else{
-      if(_cachedUid){window.location.href='app.html';return;}
+      if(_cachedUid){
+        // Stale UID exists but Firebase resolved unauthenticated — clear it so
+        // app.html doesn't boot with a stale session, then show the login gate.
+        try{localStorage.removeItem('ft_uid');}catch{}
+      }
       document.getElementById('loadingScreen').classList.add('hidden');
       const lg=document.getElementById('loginGate');lg.classList.remove('hidden');lg.style.display='flex';
     }
