@@ -2479,26 +2479,12 @@ onAuthStateChanged(auth, async user => {
   if (user) {
     if (!loaded) await bootApp(user);
   } else {
-    // ── REDIRECT LOOP FIX ─────────────────────────────────────────────
-    // Firebase ALWAYS emits null synchronously on initialisation before it
-    // has finished reading the persisted token from IndexedDB.  If we act
-    // on that first null we clear ft_uid, redirect to sign.html, sign.html
-    // sees the still-valid Firebase session → redirects back → loop.
-    // Rule: if the app hasn't booted yet AND we have a cached UID, this is
-    // the "pre-load" null — wait for the real resolved state.
-    if (!loaded && _cachedUidSnapshot) return;
-
-    // Firebase fires null when offline, or transiently during reconnect —
-    // ignore unless it's a genuine sign-out (online, not reconnecting, not
-    // mid offline-boot).
-    if (_cachedUidSnapshot && (!navigator.onLine || _offlineBooted || _reconnecting)) return;
-    // Real sign-out — clear cache and go to sign-in page
-    cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
-    _offlineBooted = false; _reconnecting = false;
-    try { localStorage.removeItem('ft_uid'); localStorage.setItem('ft_signed_out','1'); } catch(e){}
-    try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
-          idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
-    window.location.replace('./sign.html');
+    // Spontaneous null with cached UID = transient event (init, redirect
+    // resolution, token refresh). Never redirect — _doSignOutCleanup()
+    // handles all genuine sign-outs explicitly before auth state changes.
+    if (_cachedUidSnapshot) return;
+    // No cached UID = never signed in on this device. Nothing to do here —
+    // the 6s last-resort timer will redirect to sign.html if needed.
   }
 });
 
@@ -2551,10 +2537,19 @@ document.getElementById('googleSignInBtn').addEventListener('click', async () =>
 document.getElementById('avatarEl').addEventListener('click',toggleMenu);
 document.getElementById('menuBackdrop').addEventListener('click',closeMenu);
 document.getElementById('userMenu').addEventListener('click',e=>e.stopPropagation());
+function _doSignOutCleanup() {
+  cu=null; loaded=false; profile={}; appRendered=false; teachers={}; payments=[]; batches={};
+  _offlineBooted=false; _reconnecting=false;
+  try { localStorage.removeItem('ft_uid'); localStorage.setItem('ft_signed_out','1'); } catch(e){}
+  try { idbSet('profile',null); idbSet('teachers',null); idbSet('payments',null); idbSet('batches',null);
+        idbSet('_lastSyncTs',null); idbSet('_profileSyncTs',null); } catch(e){}
+  window.location.replace('./sign.html');
+}
 window.doSignOut=async function(){
   try{
     _reconnecting = false;
     window._clearSWCache?.();
+    _doSignOutCleanup();
     await signOut(auth);
   }catch(e){ toast('Sign out failed: '+e.message,'error'); }
 };
@@ -2563,6 +2558,7 @@ document.getElementById('signOutBtn').addEventListener('click', async () => {
   try{
     _reconnecting = false;
     window._clearSWCache?.();
+    _doSignOutCleanup();
     await signOut(auth);
   }catch(e){ toast('Sign out failed: '+e.message,'error'); }
 });
