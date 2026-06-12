@@ -41,12 +41,15 @@ const _cfgPromise = _getConfig();
 
 // ── Safety net ─────────────────────────────────────────────────────────────
 // Registered SYNCHRONOUSLY before any await, so it fires even if the module
-// crashes on config load. After 5 s it forces the login screen visible.
+// Absolute skeleton deadline — fires 6s after page load regardless of
+// what happens in bootApp. Covers: slow auth, IDB block, any silent throw.
 window.__ftReady = false;
+window.__appBooted = false;
 const _safetyTid = setTimeout(() => {
-  if (window.__ftReady) return;
+  if (window.__appBooted) return;
   const _sp = document.getElementById('splashSkeleton');
   if (!_sp || _sp.classList.contains('fade-out')) return;
+  // App never booted — show login screen so user isn't stuck
   _sp.classList.add('fade-out');
   setTimeout(() => {
     _sp.remove();
@@ -58,17 +61,15 @@ const _safetyTid = setTimeout(() => {
       _lsk.classList.add('fade-out');
       setTimeout(() => { _lsk.classList.add('hidden'); if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }}, 420);
     } else if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }
-    // If the module is dead, give the user a way out
     const _btn = document.getElementById('googleSignInBtn');
     if (_btn) { _btn.disabled = false; }
     const _note = document.querySelector('.login-note');
-    if (_note && !window.__ftReady) _note.textContent = 'Having trouble? Reload the page to try again.';
+    if (_note) _note.textContent = 'Taking longer than usual — tap to sign in again.';
   }, 420);
-}, 5000);
+}, 6000);
 
 const cfg = await _cfgPromise;
-window.__ftReady = true;   // config loaded — cancel safety net
-clearTimeout(_safetyTid);
+window.__ftReady = true;   // config loaded successfully
 
 const _app1 = initializeApp(cfg.firebase.primary, 'primary');
 
@@ -2241,6 +2242,7 @@ async function obSubmit(){
 let loaded = false;
 
 function hideSplash(){
+  window.__appBooted = true;
   if (typeof _skelKill !== 'undefined') try { clearTimeout(_skelKill); } catch {}
   const s=document.getElementById('splashSkeleton');
   if(s){ s.classList.add('fade-out'); setTimeout(()=>{ if(s.parentNode) s.parentNode.removeChild(s); },400); }
@@ -2253,10 +2255,6 @@ async function bootApp(user) {
   showOfflineBanner(false);
   loaded = true; cu = user;
 
-  // Hard deadline — skeleton must be gone within 4s regardless of what
-  // happens below (slow Firestore, IDB block, any exception).
-  const _skelKill = setTimeout(hideSplash, 4000);
-
   db = _db1;
   try { localStorage.setItem('ft_uid', user.uid); } catch {}
 
@@ -2267,13 +2265,17 @@ async function bootApp(user) {
   const av = document.getElementById('avatarEl');
   const ma = document.getElementById('menuAvatar');
   const initial = (user.displayName||'U')[0].toUpperCase();
-  if (user.photoURL) {
-    av.innerHTML=`<img src="${user.photoURL}">`;
-    ma.innerHTML=`<img src="${user.photoURL}">`;
-  } else { av.textContent=initial; ma.textContent=initial; }
-  document.getElementById('menuName').textContent  = user.displayName||'User';
-  document.getElementById('menuEmail').textContent = user.email||'';
-  document.getElementById('loginScreen').classList.add('hidden');
+  if (av) {
+    if (user.photoURL) av.innerHTML=`<img src="${user.photoURL}">`;
+    else av.textContent=initial;
+  }
+  if (ma) {
+    if (user.photoURL) ma.innerHTML=`<img src="${user.photoURL}">`;
+    else ma.textContent=initial;
+  }
+  document.getElementById('menuName')  && (document.getElementById('menuName').textContent  = user.displayName||'User');
+  document.getElementById('menuEmail') && (document.getElementById('menuEmail').textContent = user.email||'');
+  document.getElementById('loginScreen')?.classList.add('hidden');
   window._syncSidebarUser?.(user);
   sbSetPage?.('home');
   const splashAv = document.getElementById('splashAvatar');

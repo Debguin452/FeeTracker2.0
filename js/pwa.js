@@ -1,5 +1,18 @@
 if ('serviceWorker' in navigator) {
+  // When a new SW takes control, reload once so the fresh app.js is served.
+  // Guard with sessionStorage so we only reload once per SW update, not on every load.
+  let _swReloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swReloading) return;
+    if (sessionStorage.getItem('sw_reloaded') === 'done') return;
+    _swReloading = true;
+    sessionStorage.setItem('sw_reloaded', 'done');
+    location.reload();
+  });
+
   window.addEventListener('load', async () => {
+    // Clear the one-shot reload guard so the next SW update can reload again
+    sessionStorage.removeItem('sw_reloaded');
     try {
       const reg = await navigator.serviceWorker.register('sw.js?v=13');
 
