@@ -41,31 +41,18 @@ const _cfgPromise = _getConfig();
 
 // ── Safety net ─────────────────────────────────────────────────────────────
 // Registered SYNCHRONOUSLY before any await, so it fires even if the module
-// Absolute skeleton deadline — fires 6s after page load regardless of
-// what happens in bootApp. Covers: slow auth, IDB block, any silent throw.
+// Absolute skeleton deadline — fires 6s after page load.
+// If bootApp hasn't completed, redirect to sign.html which has the
+// full sign-in UI (Google + email/password + register).
 window.__ftReady = false;
 window.__appBooted = false;
 const _safetyTid = setTimeout(() => {
   if (window.__appBooted) return;
   const _sp = document.getElementById('splashSkeleton');
   if (!_sp || _sp.classList.contains('fade-out')) return;
-  // App never booted — show login screen so user isn't stuck
-  _sp.classList.add('fade-out');
-  setTimeout(() => {
-    _sp.remove();
-    const _ls  = document.getElementById('loginScreen');
-    const _lsk = document.getElementById('loginSkeleton');
-    const _lc  = document.getElementById('loginContent');
-    if (_ls)  _ls.classList.remove('hidden');
-    if (_lsk) {
-      _lsk.classList.add('fade-out');
-      setTimeout(() => { _lsk.classList.add('hidden'); if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }}, 420);
-    } else if (_lc) { _lc.style.opacity='1'; _lc.style.pointerEvents='auto'; }
-    const _btn = document.getElementById('googleSignInBtn');
-    if (_btn) { _btn.disabled = false; }
-    const _note = document.querySelector('.login-note');
-    if (_note) _note.textContent = 'Taking longer than usual — tap to sign in again.';
-  }, 420);
+  // Clear ft_uid so sign.html doesn't auto-redirect back into the broken boot
+  try { localStorage.removeItem('ft_uid'); } catch(e) {}
+  location.replace('./sign.html');
 }, 6000);
 
 const cfg = await _cfgPromise;
@@ -259,9 +246,9 @@ async function loadFromCacheAsync(){
   
   const swm = window.__SW_HYDRATE_MAP__ || {};
 
-  // Race IDB reads against a 2s timeout — if IDB is blocked (another tab
+  // Race IDB reads against a 1s timeout — if IDB is blocked (another tab
   // holding the old version), fall through immediately to LS/SW fallbacks.
-  const _idbTimeout = new Promise(r => setTimeout(() => r([null,null,null,null,null]), 2000));
+  const _idbTimeout = new Promise(r => setTimeout(() => r([null,null,null,null,null]), 1000));
   const [ct,cp,cb,cpr,css] = await Promise.race([
     Promise.all([
       idbGet('teachers'), idbGet('payments'), idbGet('batches'),
@@ -705,19 +692,32 @@ function showNotifPrompt() {
 async function loadProfile(){
   
   if(!profile.role){
-    const cached = await idbGet('profile') || LS.get('profile');
+    const cached = await idbGet('profile').catch(()=>null) || LS.get('profile');
     if(cached){ profile=cached; updateRole(); }
   }
-  
-  try {
-    const profileTs = await idbGet('_profileSyncTs');
-    if (profile.role && profileTs && (Date.now() - profileTs) < 10 * 60 * 1000) {
+
+  // Returning user with fresh LS profile — skip Firestore, sync in background
+  if(profile.role){
+    const profileTs = await idbGet('_profileSyncTs').catch(()=>null);
+    if(profileTs && (Date.now() - profileTs) < 10 * 60 * 1000){
       updateRole();
-      return; 
+      return;
     }
-  } catch(e) {  }
+    // Sync Firestore in background without blocking
+    (async()=>{
+      try{
+        const s = await getDoc(prRef());
+        if(s.exists()){ profile=s.data(); saveProfileToCache(profile); updateRole();
+          try{ await idbSet('_profileSyncTs',Date.now()); }catch(e){}
+        }
+      }catch(e){}
+    })();
+    return;
+  }
+
+  // No cached profile at all — new user or cleared cache, must wait for Firestore
   try{
-    const _timeout = new Promise((_,rej) => setTimeout(() => rej(new Error('profile_timeout')), 5000));
+    const _timeout = new Promise((_,rej) => setTimeout(() => rej(new Error('profile_timeout')), 3000));
     const s=await Promise.race([getDoc(prRef()), _timeout]);
     if(s.exists()){
       profile=s.data(); saveProfileToCache(profile);
