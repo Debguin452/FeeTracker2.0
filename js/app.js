@@ -52,7 +52,7 @@ const _safetyTid = setTimeout(() => {
   if (!_sp || _sp.classList.contains('fade-out')) return;
   // Clear ft_uid so sign.html doesn't auto-redirect back into the broken boot
   try { localStorage.removeItem('ft_uid'); } catch(e) {}
-  location.replace('./sign.html');
+  location.replace('./sign');
 }, 6000);
 
 const cfg = await _cfgPromise;
