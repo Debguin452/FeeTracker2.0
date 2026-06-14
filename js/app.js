@@ -2093,13 +2093,14 @@ async function bootApp(user) {
     }
 
   } catch (fatalErr) {
-    // Something went badly wrong. Reset loaded so the next auth event can retry.
-    loaded = false;
+    // bootApp hit an unexpected error. loaded stays true — a retry won't help
+    // since onAuthStateChanged already fired. Instead surface the error and let
+    // the user act (reload, sign out).
     console.error('bootApp fatal error:', fatalErr);
-    // Surface the error — show the fallback sign-in button if still on splash
+    hideSplash();
     const _gb = document.getElementById('googleSignInBtn');
     if (_gb) { _gb.disabled = false; _gb.style.display = ''; }
-    _showAuthError('Failed to load your profile. Check your connection and try again.');
+    _showAuthError('Something went wrong loading your profile. Please reload the page.');
   }
 }
 
@@ -2267,11 +2268,16 @@ setTimeout(() => {
 setTimeout(async () => {
   if (loaded || _offlineBooted) return;
   if (!_cachedUidSnapshot) return;  // no cached UID — timer 1 handles them
+  // If Firebase already resolved with a valid user, bootApp is running (or just
+  // finished). The loaded flag may have been cleared by a fatalErr — but we must
+  // not redirect an authenticated user to sign.html.
+  if (auth.currentUser) return;
   const cachedProfile = await idbGet('profile').catch(() => null) || LS.get('profile');
   if (cachedProfile && cachedProfile.role) {
     await _bootFromCache(_cachedUidSnapshot, cachedProfile);
   } else {
-    // No cached profile either — go to sign-in
+    // No current user, no cached profile — Firebase must be genuinely down.
+    // Redirect so the user can sign in again.
     location.replace('./sign.html');
   }
 }, 10000);
