@@ -52,7 +52,7 @@ const _safetyTid = setTimeout(() => {
   if (!_sp || _sp.classList.contains('fade-out')) return;
   // Clear ft_uid so sign.html doesn't auto-redirect back into the broken boot
   try { localStorage.removeItem('ft_uid'); } catch(e) {}
-  location.replace('./sign');
+  location.replace('./sign.html');
 }, 6000);
 
 const cfg = await _cfgPromise;
@@ -125,10 +125,6 @@ const USER_LOCALE=navigator.language||'en-IN';
 function fmt(n){
   try{ return new Intl.NumberFormat(USER_LOCALE,{style:'currency',currency:USER_CURRENCY,maximumFractionDigits:0}).format(n); }
   catch(e){ return '₹'+n.toLocaleString(); }
-}
-function fmtCompact(n){
-  try{ return new Intl.NumberFormat(USER_LOCALE,{style:'currency',currency:USER_CURRENCY,notation:'compact',maximumFractionDigits:1}).format(n); }
-  catch(e){ return fmt(n); }
 }
 window._fmt=fmt;
 function _applyCurSymbol(){
@@ -204,17 +200,6 @@ async function idbSet(k, v, store=IDB_STORE){
   } catch {}
 }
 
-async function idbDel(k, store=IDB_STORE){
-  try {
-    const db = await idbReady;
-    return new Promise((res,rej)=>{
-      const tx=db.transaction(store,'readwrite');
-      const r=tx.objectStore(store).delete(idbKey(k));
-      r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
-    });
-  } catch(e){}
-}
-
 function saveBatchDetailToCache(bid){
   if(!bid) return;
   idbSet(bid, { students: batchStudents, payments: batchPayments }, 'batches_detail');
@@ -233,14 +218,6 @@ function _invalidateBatchCache(bid){
 const LS = {
   get: (k) => { try { const v=localStorage.getItem(`ft__${getCacheUid()}__${k}`); return v?JSON.parse(v):null; } catch{ return null; } },
 };
-
-function loadFromCache(){
-  
-  const ct=LS.get('teachers'); if(ct) teachers=ct;
-  const cp=LS.get('payments'); if(cp) payments=cp;
-  const cb=LS.get('batches');  if(cb) batches=cb;
-  const cpr=LS.get('profile'); if(cpr){ profile=cpr; }
-}
 
 async function loadFromCacheAsync(){
   
@@ -365,10 +342,9 @@ window.addEventListener('online', async () => {
   navigator.serviceWorker?.controller?.postMessage({ type: 'ONLINE' });
 
   if (loaded && profile.role) {
-    
-    const hadLocalPays = (payments||[]).some(p => p.id?.startsWith('local_'));
+    const hadLocalPays = (payments || []).some(p => p.id?.startsWith('local_'));
     toast(hadLocalPays ? 'Back online — uploading payments…' : 'Back online — syncing…', 'success');
-    await loadAll(true);
+    try { await loadAll(true); } catch { toast('Sync failed — will retry when connection is stable.', 'error'); }
 
   } else if (_offlineBooted) {
     toast('Back online — syncing…', 'success');
@@ -564,12 +540,6 @@ async function refreshFCMTokenIfNeeded() {
     await saveFCMToken(token);
 
   } catch {}
-}
-
-async function removeFCMToken() {
-  if (!uid()) return;
-  const deviceId = getDeviceId();
-  try { await deleteDoc(doc(db, 'users', uid(), 'fcmTokens', deviceId)); } catch(e) {}
 }
 
 function buildReminderBody(dueTeachers) {
@@ -825,95 +795,6 @@ async function saveProfile(){
     await loadAll();
   } catch(e){ toast('Failed: '+e.message,'error'); }
   btn.textContent='Save Profile'; btn.disabled=false;
-}
-
-function showAppSkeleton(){
-  if(appRendered) return;
-  const root=document.getElementById('appInner');
-  
-  const studentCards=`
-    <div class="sk-tc">
-      <div class="sk-tc-body">
-        <div style="flex:1;min-width:0;padding-right:12px;">
-          <div class="sk" style="width:130px;height:15px;border-radius:6px;margin-bottom:7px;"></div>
-          <div class="sk" style="width:90px;height:10px;border-radius:5px;margin-bottom:6px;opacity:.6;"></div>
-          <div class="sk" style="width:70px;height:9px;border-radius:4px;opacity:.35;"></div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="sk" style="width:68px;height:22px;border-radius:7px;margin-bottom:6px;"></div>
-          <div class="sk" style="width:44px;height:9px;border-radius:4px;opacity:.4;"></div>
-        </div>
-      </div>
-      <div class="sk-tc-tabs">
-        <div class="sk" style="height:40px;border-radius:10px;"></div>
-        <div class="sk" style="height:40px;border-radius:10px;opacity:.55;"></div>
-        <div class="sk" style="height:40px;border-radius:10px;opacity:.3;"></div>
-      </div>
-      <div class="sk-tc-pay">
-        <div class="sk" style="flex:1;height:48px;border-radius:13px;"></div>
-        <div class="sk" style="width:80px;height:48px;border-radius:13px;opacity:.7;"></div>
-      </div>
-      <div class="sk-tc-bar">
-        <div class="sk" style="width:90px;height:9px;border-radius:5px;opacity:.35;"></div>
-        <div class="sk" style="width:20px;height:20px;border-radius:6px;opacity:.25;"></div>
-      </div>
-    </div>
-    <div class="sk-tc" style="opacity:.5;">
-      <div class="sk-tc-body">
-        <div style="flex:1;min-width:0;padding-right:12px;">
-          <div class="sk" style="width:110px;height:15px;border-radius:6px;margin-bottom:7px;"></div>
-          <div class="sk" style="width:76px;height:10px;border-radius:5px;opacity:.6;"></div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="sk" style="width:58px;height:22px;border-radius:7px;margin-bottom:6px;"></div>
-          <div class="sk" style="width:38px;height:9px;border-radius:4px;opacity:.4;"></div>
-        </div>
-      </div>
-      <div class="sk-tc-tabs">
-        <div class="sk" style="height:40px;border-radius:10px;"></div>
-        <div class="sk" style="height:40px;border-radius:10px;opacity:.55;"></div>
-        <div class="sk" style="height:40px;border-radius:10px;opacity:.3;"></div>
-      </div>
-    </div>
-    <div class="sk-tc" style="opacity:.22;">
-      <div class="sk-tc-body">
-        <div style="flex:1;min-width:0;padding-right:12px;">
-          <div class="sk" style="width:95px;height:15px;border-radius:6px;margin-bottom:7px;"></div>
-          <div class="sk" style="width:64px;height:10px;border-radius:5px;opacity:.6;"></div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="sk" style="width:52px;height:22px;border-radius:7px;"></div>
-        </div>
-      </div>
-    </div>`;
-  
-  const batchCards=`
-    <div class="sk-tc" style="padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <div style="flex:1;"><div class="sk" style="width:50%;height:14px;border-radius:6px;margin-bottom:7px;"></div><div class="sk" style="width:70%;height:11px;border-radius:5px;opacity:.6;"></div></div>
-        <div class="sk sk-pill" style="width:58px;height:22px;"></div>
-      </div>
-      <div style="display:flex;gap:6px;"><div class="sk sk-pill" style="width:52px;height:22px;opacity:.5;"></div><div class="sk sk-pill" style="width:52px;height:22px;opacity:.35;"></div><div class="sk sk-pill" style="width:52px;height:22px;opacity:.2;"></div></div>
-    </div>
-    <div class="sk-tc" style="padding:16px;opacity:.55;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-        <div style="flex:1;"><div class="sk" style="width:45%;height:14px;border-radius:6px;margin-bottom:7px;"></div><div class="sk" style="width:65%;height:11px;border-radius:5px;opacity:.6;"></div></div>
-        <div class="sk sk-pill" style="width:50px;height:22px;"></div>
-      </div>
-    </div>
-    <div class="sk-tc" style="padding:16px;opacity:.25;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="flex:1;"><div class="sk" style="width:40%;height:14px;border-radius:6px;"></div></div>
-      </div>
-    </div>`;
-  root.innerHTML=`
-    <div class="sk-hero"></div>
-    <div class="sk" style="width:100%;height:42px;border-radius:14px;margin-bottom:18px;opacity:.8;"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div class="sk" style="width:68px;height:8px;border-radius:5px;opacity:.4;"></div>
-      <div class="sk sk-pill" style="width:24px;height:15px;opacity:.3;"></div>
-    </div>
-    ${isT()?batchCards:studentCards}`;
 }
 
 let appRendered = false;
@@ -1373,32 +1254,10 @@ function closeModal(overlayId) {
   if (el) el.classList.add('hidden');
 }
 
-function staggerChildren(container, selector, baseDelay=0, step=0.05, max=0.35) {
-  const items = container?.querySelectorAll(selector);
-  if (!items) return;
-  items.forEach((el, i) => {
-    el.style.animationDelay = Math.min(baseDelay + i * step, max) + 's';
-  });
-}
-
-function addRipple(el, e) {
-  const rect = el.getBoundingClientRect();
-  const x = (e.clientX || rect.left + rect.width/2) - rect.left;
-  const y = (e.clientY || rect.top  + rect.height/2) - rect.top;
-  const size = Math.max(rect.width, rect.height) * 1.6;
-  const r = document.createElement('span');
-  r.className = 'tap-ripple';
-  r.style.cssText = `width:${size}px;height:${size}px;left:${x - size/2}px;top:${y - size/2}px`;
-  el.style.position = el.style.position || 'relative';
-  el.style.overflow = 'hidden';
-  el.appendChild(r);
-  r.addEventListener('animationend', () => r.remove(), { once: true });
-}
-
 function render(){
   appRendered = true;
-  if(isT()){ if(typeof window.renderTeacher==="function") window.renderTeacher(); else renderTeacher(); }
-  else { if(typeof window.renderStudent==="function") window.renderStudent(); else renderStudent(); }
+  if(isT()) renderTeacher();
+  else renderStudent();
   
   const _db=document.getElementById('dashBtn');
   if(_db) _db.classList.remove('hidden');
@@ -1468,82 +1327,6 @@ function renderCards(){
   }
 }
 
-function renderStudent(){
-  const root=document.getElementById('appInner');
-  const td=totalDue(), n=new Date();
-  const ds=n.toLocaleDateString(USER_LOCALE,{day:'numeric',month:'long',year:'numeric'});
-  const ov=Object.keys(teachers).filter(id=>monthsDue(id)>0).length;
-  const cl=Object.keys(teachers).filter(id=>monthsDue(id)===0).length;
-  let h=`
-    ${!profile.className?`<div class="setup-banner" onclick="openProfileModal()"><span class="setup-banner-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="9" cy="6" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M2 16c0-3.9 3.1-6 7-6s7 2.1 7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><div class="setup-banner-text"><div class="setup-banner-title">Complete your profile</div><div class="setup-banner-sub">Add your name and class</div></div><button class="setup-banner-btn">Set up</button></div>`:''}
-    <div class="total-card" id="totalCard" style="cursor:pointer" onclick="handleTotalCardClick(event)">
-      <div class="total-label">Total Outstanding</div>
-      <div class="total-amount"><span class="cur"></span><span id="totalAmtDisplay" data-target="${td}">0</span></div>
-      <div class="total-sub" id="totalDateSub">As of ${ds}</div>
-      <div class="total-meta" id="totalMeta">
-        <div class="total-meta-item total-meta-item--pending" id="metaPending" onclick="event.stopPropagation();filterByStatus('pending')" style="cursor:pointer;transition:transform .15s,opacity .15s;" title="Show pending teachers">
-          <div class="total-meta-val" id="metaPendingVal">${ov}</div>
-          <div class="total-meta-lbl">Pending</div>
-        </div>
-        <div class="total-meta-item total-meta-item--clear" id="metaClear" onclick="event.stopPropagation();filterByStatus('clear')" style="cursor:pointer;transition:transform .15s,opacity .15s;" title="Show clear teachers">
-          <div class="total-meta-val" id="metaClearVal">${cl}</div>
-          <div class="total-meta-lbl">Clear</div>
-        </div>
-        <div class="total-meta-item total-meta-item--all" id="metaAll" onclick="event.stopPropagation();filterByStatus('all')" style="cursor:pointer;transition:transform .15s,opacity .15s;" title="Show all teachers">
-          <div class="total-meta-val" id="metaAllVal">${Object.keys(teachers).length}</div>
-          <div class="total-meta-lbl">Teachers</div>
-        </div>
-      </div>
-    </div>
-    <div class="search-wrap">
-      <span class="search-icon"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/></svg></span>
-      <input class="search-input" type="text" placeholder="Search teacher or subject\u2026" value="${searchQ}" oninput="onSearch(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" />
-      ${searchQ?`<span class="search-clear" onclick="onSearch('');document.querySelector('.search-input').value='';" style="display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width='11' height='11' viewBox='0 0 12 12' fill='none' style='display:block'><line x1='1' y1='1' x2='11' y2='11' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/><line x1='11' y1='1' x2='1' y2='11' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/></svg></span>`:''}
-    <div class="section-label"><span class="section-label-txt">Teachers</span><span class="section-label-count" id="teachers-count">${Object.keys(teachers).length}</span></div>
-    <div id="cards-list">`;
-
-  if(!Object.keys(teachers).length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><rect x="8" y="6" width="34" height="40" rx="5" fill="currentColor" opacity=".08" stroke="currentColor" stroke-width="2"/><line x1="16" y1="18" x2="36" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="30" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="34" x2="26" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div class="empty-title">No teachers yet</div><div class="empty-sub">Tap <strong>+</strong> to add your first teacher and start tracking.</div></div>`;
-    root.innerHTML=h; return;
-  }
-  const sorted=Object.keys(teachers).sort((a,b)=>calcDue(b)-calcDue(a)).filter(id=>{ const q=searchQ.toLowerCase(); return !q||teachers[id].name.toLowerCase().includes(q)||teachers[id].subject.toLowerCase().includes(q); });
-  if(!sorted.length){ h+=`<div class="no-results">No results for "<strong>${searchQ}</strong>"</div></div>`; root.innerHTML=h; return; }
-
-  let dl=0;
-  
-  const _pbtRS = {};
-  payments.forEach(p => { (_pbtRS[p.teacherId] = _pbtRS[p.teacherId] || []).push(p); });
-  for(const id of sorted){
-    const t=teachers[id], dm=monthsDue(id), da=calcDue(id), lps=lastPaidStr(id), ov2=dm>=3, cr=dm>=6, pb=partialBal(id);
-    const tpy=(_pbtRS[id]||[]).sort((a,b)=>b.timestamp-a.timestamp);
-    const bdg=cr?`<span class="overdue-badge critical"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M7 2L0.5 13h13L7 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="7" y1="6.5" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="11.2" r=".7" fill="currentColor"/></svg>${dm}mo</span>`:ov2?`<span class="overdue-badge"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M7 2L0.5 13h13L7 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><line x1="7" y1="6.5" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="11.2" r=".65" fill="currentColor"/></svg>${dm}mo</span>`:'';
-    h+=`<div class="teacher-card ${cr?'card-critical':ov2?'card-overdue':''}" data-id="${id}" style="animation-delay:${dl}s"
-      onclick="if(selMode){event.stopPropagation();selTap('${id}');return;}openTeacherDetail('${id}')">
-      <div class="card-top">
-        <div class="card-header">
-          <div class="card-left">
-            <div class="teacher-name-row"><div class="teacher-name">${t.name}</div>${bdg}</div>
-            <div class="teacher-subject">${t.subject} · ${fmt(t.fee)}/mo</div>
-            ${lps?`<div class="last-paid">Last paid: ${lps}</div>`:`<div class="last-paid never">Never paid</div>`}
-          </div>
-          <div class="due-badge">
-            <div class="due-amount ${da===0?'zero':cr?'critical':''}">${fmt(da)}</div>
-            <div class="due-months">${dm===0?'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:inline-block;vertical-align:middle;margin-right:2px"><polyline points="1.5,5.5 4,8 8.5,2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>All clear':`${dm} month${dm>1?'s':''} due`}</div>
-            ${pb>0?`<div class="partial-chip">+${fmt(pb)} partial</div>`:''}
-          </div>
-        </div>
-      </div>
-      <div class="tc-tap-hint">
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Tap to pay, view history &amp; more
-      </div>
-    </div>`;
-    dl=Math.min(dl+0.05, 0.3);
-  }
-  h+='</div>';
-  root.innerHTML=h;
-}
-
 // TEACHER: BATCH + STUDENT + PAYMENT SYSTEM
 let currentBatchId=null, batchStudents={}, batchPayments=[];
 const stuCol=bid=>collection(db,'users',uid(),'batches',bid,'students');
@@ -1567,7 +1350,6 @@ function sPartialBal(bid,sid){const fee=sFee(bid);let cc=0;
     .forEach(p=>{if(p.type==='partial'){cc+=p.amount;cc%=fee;}else if(p.monthsPaid)cc=0;});return cc;}
 function sMonthsDue(bid,sid){const n=new Date(),lp=sLastPaid(bid,sid);let m=mBetween(lp,{month:n.getMonth()+1,year:n.getFullYear()});if(m>0&&n.getDate()<(lp.day||1))m--;return Math.max(m,0);}
 function sCalcDue(bid,sid){const fee=sFee(bid),mo=sMonthsDue(bid,sid);return mo?Math.max(mo*fee-sPartialBal(bid,sid),0):0;}
-function sTotalDue(bid){return Object.keys(batchStudents).reduce((s,sid)=>s+sCalcDue(bid,sid),0);}
 function sLastPaidStr(sid){const tp=batchPayments.filter(p=>p.studentId===sid).sort((a,b)=>b.timestamp-a.timestamp);
   if(!tp.length)return null;const p=tp[0];return p.paidOn?`${p.paidOn.day} ${MONTHS[p.paidOn.month-1]} ${p.paidOn.year}`:null;}
 
@@ -1942,45 +1724,6 @@ async function saveAllStudents(){
   }catch(e){toast('Error: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Save All';}
 
-function renderTeacher(){
-  const root=document.getElementById('appInner');
-  const subjs=profile.subjects||[], classes=profile.classes||[], sess=profile.session||'', bList=Object.keys(batches);
-  const subjLine=[subjs.length?subjs.join(', '):'No subjects set', classes.length?classes.join(', '):'', sess].filter(Boolean).join(' · ');
-  let h=`
-    ${!profile.displayName?`<div class="setup-banner" onclick="openProfileModal()"><span class="setup-banner-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><div class="setup-banner-text"><div class="setup-banner-title">Set up your teacher profile</div><div class="setup-banner-sub">Add your subjects and session</div></div><button class="setup-banner-btn">Set up</button></div>`:''}
-    <div class="teacher-mode-header" onclick="openTeacherDash()" style="cursor:pointer" title="Open Analytics"><div class="tmh-icon" style="display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><circle cx="7" cy="5.5" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M1 15c0-3.3 2.7-5 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 10v6M10 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="tmh-info"><div class="tmh-title">Teacher Dashboard</div><div class="tmh-sub">${subjLine}</div></div><div style="display:flex;align-items:center;color:var(--accent);opacity:.8;transition:opacity .2s;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    <div class="search-wrap">
-      <span class="search-icon" style="display:flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:block"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.7"/><line x1="10.5" y1="10.5" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
-      <input class="search-input" type="text" placeholder="Search batch…" id="teacherSearchInp" value="${searchQ}" oninput="onSearch(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" />
-      ${searchQ?`<span class="search-clear" onclick="onSearch('');const s=document.getElementById('teacherSearchInp');if(s){s.value='';s.focus();}" style="display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="display:block"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>`:''}
-    </div>
-    <div class="section-label"><span class="section-label-txt">My Batches</span><span class="section-label-count">${bList.length}</span></div>`;
-  if(!bList.length && !_standaloneStudents.length){
-    h+=`<div class="empty-state"><div class="empty-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0"><path d="M26 9L5 21l21 12 21-12L26 9z" fill="currentColor" opacity=".1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 30l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><path d="M5 39l21 12 21-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/></svg></div><div class="empty-title">No batches yet</div><div class="empty-sub">Tap <strong>+</strong> to create a batch and start tracking fees.</div></div>`;
-    root.innerHTML=h; return;
-  }
-  if(bList.length){
-    const fil=bList.filter(id=>{const q=searchQ.toLowerCase();return !q||batches[id].name.toLowerCase().includes(q)||batches[id].subject?.toLowerCase().includes(q);}).sort((a,b)=>{
-      return 0;
-    });
-    let dl=0;
-    for(const bid of fil){const b=batches[bid];
-      const isSel=selMode&&selContext==='batch'&&selItems.has(bid);
-      h+=`<div class="batch-card ${isSel?'selected':''}" data-id="${bid}" style="animation-delay:${dl}s"
-        onclick="if(selMode&&selContext==='batch'){selTap('${bid}');return;}openBatchDetail('${bid}')">
-
-        <div class="batch-header"><div><div class="batch-name">${b.name}</div><div class="batch-meta">${b.class?b.class+' · ':''} ${fmt(b.fee)}/mo per student${b.timing?' · '+b.timing:''}</div></div>${b.session?`<span class="batch-session-badge">${b.session}</span>`:''}</div>
-        <div class="batch-subject-list">${b.subject.split(',').map(s=>`<span class="batch-subj-chip">${s.trim()}</span>`).join('')}</div>
-        ${selMode&&selContext==='batch'?'':`<div class="batch-actions">
-          <button class="batch-open-btn" onclick="event.stopPropagation();openBatchDetail('${bid}')" style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0" ><path d="M11 13v-1a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="6" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M14 13v-1a3 3 0 0 0-2-2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 3.2a2.5 2.5 0 0 1 0 4.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> View students ›</button>
-          <button class="batch-del-btn" onclick="event.stopPropagation();deleteBatch('${bid}')" style="display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:block"><path d="M2 4h12M6 4V2h4v2M5 4l1 9h4l1-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        </div>`}
-      </div>`;dl=Math.min(dl+0.05,0.3);}
-  }
-  root.innerHTML=h;
-  _renderStandaloneSection();
-}
-
 let _standaloneStudents=[], _assignIsStandalone=false;
 
 async function loadStandaloneStudents(){
@@ -2082,11 +1825,13 @@ window.deleteStandaloneStudent=async function(sid,name){
 // ONBOARDING -- 3-step with smart button visibility
 let obRole = '', obSubjects = [], obClasses = [];
 
-function obShowBtn(id){
-  // Hide all step buttons first
+function _hideAllObBtns(){
   ['obNextBtn1','obNextBtn2','obDoneBtn','obDoneTeacherBtn'].forEach(b=>{
     const el=document.getElementById(b); if(el) el.style.display='none';
   });
+}
+function obShowBtn(id){
+  _hideAllObBtns();
   const el=document.getElementById(id); if(el) el.style.display='';
 }
 
@@ -2134,7 +1879,7 @@ window.obNext = function(from){
       obAnimateStep(tf);
     }
     // Hide done btn until fields are filled
-    obShowBtn('__none__');
+    _hideAllObBtns();
   }
 };
 
@@ -2180,7 +1925,7 @@ function obRenderSubjs(){
 }
 window.obRmSubj=function(i){
   obSubjects.splice(i,1); obRenderSubjs();
-  if(obSubjects.length===0) obShowBtn('__none__');
+  if(obSubjects.length===0) _hideAllObBtns();
 };
 
 window.obAddClass = function(){
@@ -2243,6 +1988,7 @@ let loaded = false;
 
 function hideSplash(){
   window.__appBooted = true;
+  try { clearTimeout(_safetyTid); } catch {}
   if (typeof _skelKill !== 'undefined') try { clearTimeout(_skelKill); } catch {}
   const s=document.getElementById('splashSkeleton');
   if(s){ s.classList.add('fade-out'); setTimeout(()=>{ if(s.parentNode) s.parentNode.removeChild(s); },400); }
@@ -2250,89 +1996,110 @@ function hideSplash(){
 
 async function bootApp(user) {
   if (loaded) return;
-  _reconnecting  = false;
-  _offlineBooted = false;
-  showOfflineBanner(false);
-  loaded = true; cu = user;
+  // Set loaded before any awaits so concurrent onAuthStateChanged/redirect-result
+  // callbacks don't race into a double-boot.
+  loaded = true;
 
-  db = _db1;
-  try { localStorage.setItem('ft_uid', user.uid); } catch {}
+  try {
+    _reconnecting  = false;
+    _offlineBooted = false;
+    showOfflineBanner(false);
+    cu = user;
+    db = _db1;
+    try { localStorage.setItem('ft_uid', user.uid); } catch {}
 
-  const _gb = document.getElementById('googleSignInBtn');
-  if (_gb) _gb.disabled = false;
+    const _gb = document.getElementById('googleSignInBtn');
+    if (_gb) _gb.disabled = false;
 
-  // ── Update avatar / menu immediately ──
-  const av = document.getElementById('avatarEl');
-  const ma = document.getElementById('menuAvatar');
-  const initial = (user.displayName||'U')[0].toUpperCase();
-  if (av) {
-    if (user.photoURL) av.innerHTML=`<img src="${user.photoURL}">`;
-    else av.textContent=initial;
-  }
-  if (ma) {
-    if (user.photoURL) ma.innerHTML=`<img src="${user.photoURL}">`;
-    else ma.textContent=initial;
-  }
-  document.getElementById('menuName')  && (document.getElementById('menuName').textContent  = user.displayName||'User');
-  document.getElementById('menuEmail') && (document.getElementById('menuEmail').textContent = user.email||'');
-  document.getElementById('loginScreen')?.classList.add('hidden');
-  window._syncSidebarUser?.(user);
-  sbSetPage?.('home');
-  const splashAv = document.getElementById('splashAvatar');
-  if (splashAv) {
-    splashAv.classList.remove('sk');
-    splashAv.style.background = 'linear-gradient(135deg, var(--accent), #5a4de6)';
-    if (user.photoURL) splashAv.innerHTML=`<img src="${user.photoURL}" style="width:100%;height:100%;object-fit:cover;">`;
-    else splashAv.textContent = initial;
-  }
+    // ── Update avatar / menu immediately ──────────────────────────────────
+    const av      = document.getElementById('avatarEl');
+    const ma      = document.getElementById('menuAvatar');
+    const initial = (user.displayName || 'U')[0].toUpperCase();
+    if (av) {
+      if (user.photoURL) av.innerHTML = `<img src="${user.photoURL}">`;
+      else av.textContent = initial;
+    }
+    if (ma) {
+      if (user.photoURL) ma.innerHTML = `<img src="${user.photoURL}">`;
+      else ma.textContent = initial;
+    }
+    const menuName  = document.getElementById('menuName');
+    const menuEmail = document.getElementById('menuEmail');
+    if (menuName)  menuName.textContent  = user.displayName || 'User';
+    if (menuEmail) menuEmail.textContent = user.email || '';
+    document.getElementById('loginScreen')?.classList.add('hidden');
+    window._syncSidebarUser?.(user);
+    sbSetPage?.('home');
+    const splashAv = document.getElementById('splashAvatar');
+    if (splashAv) {
+      splashAv.classList.remove('sk');
+      splashAv.style.background = 'linear-gradient(135deg, var(--accent), #5a4de6)';
+      if (user.photoURL) splashAv.innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;object-fit:cover;">`;
+      else splashAv.textContent = initial;
+    }
 
-  // ── Step 1: Load IDB cache (fast, local storage) ──
-  await loadFromCacheAsync();
+    // ── Step 1: Load IDB cache ────────────────────────────────────────────
+    await loadFromCacheAsync();
 
-  if (profile.role) {
-    // ── Cached profile found — show app INSTANTLY, sync Firestore in background ──
-    hideSplash();
-    document.getElementById('appScreen').classList.remove('hidden');
-    render(); // immediate render from cache
-    appRendered = true;
-
-    // Background refresh — doesn't block UI
-    Promise.resolve().then(async () => {
-      await loadProfile();
-      updateRole();
-      await loadAll(false);
-      _refreshConnectNotif().catch(()=>{});
-      setTimeout(() => {
-        initNotifications();
-        showNotifPrompt();
-        refreshFCMTokenIfNeeded();
-      }, 1500);
-    }).catch(() => {});
-
-  } else {
-    // ── No cached profile — first login or cleared cache, must wait ──
-    const _alo = document.getElementById('authOverlay');
-    if (_alo) _alo.classList.add('show');
-    await loadProfile();
-    if (_alo) _alo.classList.remove('show');
-
-    if (!profile.role) {
-      hideSplash();
-      document.getElementById('obName').value = user.displayName||'';
-      document.getElementById('onboardScreen').classList.remove('hidden');
-      sbSetPage?.('onboard');
-      window._sbRefreshLayout?.();
-    } else {
+    if (profile.role) {
+      // ── Cached profile found — render instantly, sync in background ──────
       hideSplash();
       document.getElementById('appScreen').classList.remove('hidden');
-      try { await loadAll(false); } catch {}
-      _refreshConnectNotif().catch(()=>{});
-      setTimeout(() => {
-        initNotifications();
-        showNotifPrompt();
-        refreshFCMTokenIfNeeded();
-      }, 1500);
+      render();
+      appRendered = true;
+      Promise.resolve().then(async () => {
+        await loadProfile();
+        updateRole();
+        await loadAll(false);
+        _refreshConnectNotif().catch(() => {});
+        setTimeout(() => {
+          initNotifications();
+          showNotifPrompt();
+          refreshFCMTokenIfNeeded();
+        }, 1500);
+      }).catch(() => {});
+
+    } else {
+      // ── No cached profile — first login or cleared cache ─────────────────
+      const _alo = document.getElementById('authOverlay');
+      if (_alo) _alo.classList.add('show');
+      try {
+        await loadProfile();
+      } catch (err) {
+        // Network failure during first load — show app in onboarding mode
+        // so the user isn't stuck on a blank screen.
+        console.warn('bootApp: loadProfile failed on first login', err);
+      } finally {
+        if (_alo) _alo.classList.remove('show');
+      }
+
+      if (!profile.role) {
+        hideSplash();
+        document.getElementById('obName').value = user.displayName || '';
+        document.getElementById('onboardScreen').classList.remove('hidden');
+        sbSetPage?.('onboard');
+        window._sbRefreshLayout?.();
+      } else {
+        hideSplash();
+        document.getElementById('appScreen').classList.remove('hidden');
+        try { await loadAll(false); } catch {}
+        _refreshConnectNotif().catch(() => {});
+        setTimeout(() => {
+          initNotifications();
+          showNotifPrompt();
+          refreshFCMTokenIfNeeded();
+        }, 1500);
+      }
     }
+
+  } catch (fatalErr) {
+    // Something went badly wrong. Reset loaded so the next auth event can retry.
+    loaded = false;
+    console.error('bootApp fatal error:', fatalErr);
+    // Surface the error — show the fallback sign-in button if still on splash
+    const _gb = document.getElementById('googleSignInBtn');
+    if (_gb) { _gb.disabled = false; _gb.style.display = ''; }
+    _showAuthError('Failed to load your profile. Check your connection and try again.');
   }
 }
 
@@ -2404,6 +2171,12 @@ getRedirectResult(auth).then(async r => {
   if (r?.user) { _clearAuthError(); await bootApp(r.user); }
 }).catch(e => {
   const skip = ['auth/no-current-user', 'auth/null-user'];
+  if (e.code && !skip.includes(e.code)) {
+    const msg = _authErrMsg(e.code);
+    if (msg) _showAuthError(msg);
+  }
+}).catch(e => {
+  const skip = ['auth/no-current-user', 'auth/null-user'];
   if (!e.code || skip.includes(e.code)) return;
   const msg = _authErrMsg(e.code);
   if (msg) { _showAuthError(msg); _resetSignInBtn(); }
@@ -2422,23 +2195,36 @@ async function _bootFromCache(cachedUid, cachedProfile) {
   if (_offlineBooted || loaded) return;
   _offlineBooted = true;
   db = _db1;
-  const fakeUser = { uid: cachedUid, displayName: cachedProfile.displayName || 'User', photoURL: null, email: cachedProfile.email || '' };
+  const fakeUser = {
+    uid: cachedUid,
+    displayName: cachedProfile.displayName || 'User',
+    photoURL: null,
+    email: cachedProfile.email || ''
+  };
   await loadFromCacheAsync();
-  profile = cachedProfile; updateRole();
-  const av = document.getElementById('avatarEl');
-  const ma = document.getElementById('menuAvatar');
-  const initial = (fakeUser.displayName||'U')[0].toUpperCase();
+  profile = cachedProfile;
+  updateRole();
+
+  const av      = document.getElementById('avatarEl');
+  const ma      = document.getElementById('menuAvatar');
+  const menuName  = document.getElementById('menuName');
+  const menuEmail = document.getElementById('menuEmail');
+  const initial = (fakeUser.displayName || 'U')[0].toUpperCase();
   if (av) { av.textContent = initial; av.classList.remove('loading'); }
   if (ma) ma.textContent = initial;
-  document.getElementById('menuName').textContent  = fakeUser.displayName;
-  document.getElementById('menuEmail').textContent = '(offline)';
+  if (menuName)  menuName.textContent  = fakeUser.displayName;
+  if (menuEmail) menuEmail.textContent = '(offline)';
   document.getElementById('loginScreen')?.classList.add('hidden');
   document.getElementById('onboardScreen')?.classList.add('hidden');
-  const hasCachedData = isT() ? Object.keys(batches).length > 0 : Object.keys(teachers).length > 0;
+
+  // For teachers: check batches; for students: check payments (not teachers)
+  const hasCachedData = isT()
+    ? Object.keys(batches).length > 0
+    : payments.length > 0;
   if (hasCachedData) render();
+
   hideSplash();
   document.getElementById('appScreen').classList.remove('hidden');
-  // Only show offline banner if actually offline
   if (!navigator.onLine) showOfflineBanner(true);
 }
 
@@ -2466,15 +2252,29 @@ setTimeout(async () => {
 }, 600);
 
 // ── Last-resort: redirect genuinely unauthenticated users ──────────────
-// Only fires when there is NO cached UID at all — meaning the user was
-// never signed in on this device. If _cachedUidSnapshot exists, Firebase
-// Auth is still resolving (or offline) — do not redirect or we get a loop.
+// ── Last-resort timers ────────────────────────────────────────────────────
+// Timer 1 (6s): For new devices with NO cached UID. Firebase must have resolved
+// by now. If still not loaded → user is not signed in → go to sign.html.
 setTimeout(() => {
   if (loaded || _offlineBooted) return;
-  if (_cachedUidSnapshot) return;          // has cached UID — wait, never redirect
-  if (auth.currentUser) return;            // auth resolved — bootApp is running
+  if (_cachedUidSnapshot) return;   // returning user — let timer 2 handle them
+  if (auth.currentUser) return;     // auth resolved, bootApp in progress
   location.replace('./sign.html');
 }, 6000);
+
+// Timer 2 (10s): For returning users (cached UID exists) who are ONLINE but Firebase
+// is abnormally slow. Force a cache boot so the app isn't stuck on splash indefinitely.
+setTimeout(async () => {
+  if (loaded || _offlineBooted) return;
+  if (!_cachedUidSnapshot) return;  // no cached UID — timer 1 handles them
+  const cachedProfile = await idbGet('profile').catch(() => null) || LS.get('profile');
+  if (cachedProfile && cachedProfile.role) {
+    await _bootFromCache(_cachedUidSnapshot, cachedProfile);
+  } else {
+    // No cached profile either — go to sign-in
+    location.replace('./sign.html');
+  }
+}, 10000);
 
 // ── onAuthStateChanged ─────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -2711,20 +2511,7 @@ document.getElementById('notifBannerClose')?.addEventListener('click', () => {
   document.getElementById('notifBanner').style.transform = 'translateY(100%)';
   localStorage.setItem('ft_notif_dismissed', '1');
 });
-document.getElementById('menuNotifBtn')?.addEventListener('click', async () => {
-  closeMenu();
-  if (Notification.permission === 'granted') {
-    // Already on — toggle off by clearing token
-    await removeFCMToken();
-    localStorage.removeItem('ft_fcm_token');
-    localStorage.removeItem('ft_last_reminder');
-    localStorage.removeItem('ft_notif_dismissed');
-    toast('Reminders turned off', '');
-    updateNotifMenuLabel();
-  } else {
-    await initNotifications();
-  }
-});
+
 
 function _applyMenuToggle(goingDark) {
   // goingDark = the NEW state we're going TO
@@ -3227,7 +3014,7 @@ document.getElementById('confirmStandaloneStudentBtn')?.addEventListener('click'
   btn.disabled=false; btn.textContent='Add Student';
 });
 
-function _patchedRenderStudent(){
+function renderStudent(){
   
   const root=document.getElementById('appInner');
   const td=totalDue(), n=new Date();
@@ -3309,7 +3096,7 @@ function _patchedRenderStudent(){
 
 }
 
-function _patchedRenderTeacher(){
+function renderTeacher(){
   const root=document.getElementById('appInner');
   const subjs=profile.subjects||[],classes=profile.classes||[],sess=profile.session||'',bList=Object.keys(batches);
   const subjLine=[subjs.length?subjs.join(', '):'No subjects set',classes.length?classes.join(', '):'',sess].filter(Boolean).join(' · ');
@@ -3434,12 +3221,8 @@ window.assignStandaloneToExistingBatch=async function(sid,name){
   document.getElementById('assignBatchModal').classList.remove('hidden');
 };
 
-// Override render to use patched versions
-const _origRenderStudent=renderStudent, _origRenderTeacher=renderTeacher;
-window.renderStudent=_patchedRenderStudent;
-window.renderTeacher=_patchedRenderTeacher;
-window._patchedRenderStudent=_patchedRenderStudent;
-window._patchedRenderTeacher=_patchedRenderTeacher;
+window.renderStudent=renderStudent;
+window.renderTeacher=renderTeacher;
 
 // ─── add payment date field to saveAllStudents ───
 // saveAllStudents uses pendingStudents which includes payDate via addOnePending patch
