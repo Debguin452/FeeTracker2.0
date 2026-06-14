@@ -110,7 +110,10 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
     .card{animation:fadeUp .35s ease both;}
   
-  </style>
+    ._sign-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surface2);border:1px solid var(--border2);border-radius:50px;padding:10px 22px;font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:999;white-space:nowrap;}
+  ._sign-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  ._sign-toast.error{border-color:rgba(255,77,109,.35);color:var(--red);}
+</style>
 </head>
 <body>
 <div class="blob blob1"></div>
@@ -309,6 +312,17 @@ function redirect() {
   } catch(e) { location.replace('./app.html'); }
 }
 
+/* ── Toast notification ─────────────────────────────────────────────────── */
+let _toastTimer = null;
+function toast(msg, type) {
+  const t = document.getElementById('_signToast');
+  if (!t) return;
+  if (_toastTimer) { clearTimeout(_toastTimer); t.className = '_sign-toast'; void t.offsetWidth; }
+  t.textContent = msg;
+  t.className = '_sign-toast show' + (type ? ' ' + type : '');
+  _toastTimer = setTimeout(() => { t.className = '_sign-toast'; _toastTimer = null; }, 3000);
+}
+
 /* ── Auth state: if already signed in → redirect immediately ─────────────── */
 let _redirected = false;
 onAuthStateChanged(auth, user => {
@@ -320,7 +334,20 @@ onAuthStateChanged(auth, user => {
 });
 
 /* ── Handle returning from signInWithRedirect ────────────────────────────── */
-getRedirectResult(auth).catch(() => {});
+(async () => {
+  try {
+    const r = await getRedirectResult(auth);
+    if (r?.user) {
+      // onAuthStateChanged will fire and redirect — nothing to do here
+    }
+  } catch(e) {
+    const skip = ['auth/no-current-user', 'auth/null-user'];
+    if (e.code && !skip.includes(e.code)) {
+      const msg = errMsg(e.code);
+      showErr('errBox', msg || 'Sign-in failed: ' + e.code);
+    }
+  }
+})();
 
 /* ── Error messages ──────────────────────────────────────────────────────── */
 function errMsg(code) {
@@ -367,7 +394,13 @@ window.doGoogle = async function() {
     await signInWithPopup(auth, provider);
   } catch(e) {
     if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
-      try { await signInWithRedirect(auth, provider); return; } catch{}
+      try { await signInWithRedirect(auth, provider); return; } catch(re) {
+        const rm = errMsg(re.code);
+        if (rm) showErr('errBox', rm);
+        setBusy('googleBtn', false, 'Continue with Google');
+        document.getElementById('emailBtn').disabled = false;
+      }
+      return;
     }
     const msg = errMsg(e.code);
     if (msg) showErr('errBox', msg);
@@ -414,12 +447,13 @@ window.doEmail = async function() {
     }
     // onAuthStateChanged fires → redirects
   } catch(e) {
-    const msg = errMsg(e.code);
-    if (msg) showErr('errBox', msg); else toast('Sign-in failed: ' + e.code, 'error');
+    // Always re-enable UI first so the user is never stuck
     setBusy('emailBtn', false, _mode === 'signin' ? 'Sign In' : 'Create Account');
     document.getElementById('googleBtn').disabled = false;
     if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
     _tsToken = null;
+    const msg = errMsg(e.code);
+    showErr('errBox', msg || ('Sign-in failed: ' + (e.code || e.message || 'unknown')));
   }
 };
 
@@ -445,5 +479,6 @@ window.doReset = async function() {
 document.getElementById('googleBtn').disabled = false;
 document.getElementById('emailBtn').disabled  = false;
 </script>
+<div id="_signToast" class="_sign-toast"></div>
 </body>
 </html>
