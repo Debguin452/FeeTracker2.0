@@ -46,6 +46,23 @@ export async function onRequest({ env, request }) {
     });
   }
 
+  // authDomain = the Pages domain that served this request, so the sign-in UI
+  // stays on feetracker2.pages.dev instead of redirecting to firebaseapp.com.
+  // functions/__/auth/[[path]].js proxies + rewrites Firebase's auth handler
+  // to make this work.
+  //
+  // REQUIRED one-time setup or Google sign-in will fail with
+  // redirect_uri_mismatch:
+  //   Google Cloud Console → APIs & Services → Credentials → find the
+  //   OAuth 2.0 Client ID Firebase auto-created for this project (named
+  //   "Web client (auto created by Google Service)") → Authorized redirect
+  //   URIs → add:
+  //     https://feetracker2.pages.dev/__/auth/handler
+  //     https://feetracker.pages.dev/__/auth/handler   (if still used)
+  //   (Firebase Console → Authentication → Authorized domains only
+  //   authorizes *initiating* sign-in from a domain — it does NOT add the
+  //   redirect URI to the Google OAuth client. That's a separate step in a
+  //   separate console, easy to miss, and is what broke this before.)
   const authDomain = new URL(request.url).hostname;
 
   const config = {
