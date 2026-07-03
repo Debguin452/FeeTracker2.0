@@ -1823,166 +1823,6 @@ window.deleteStandaloneStudent=async function(sid,name){
   }catch(e){toast('Error: '+e.message,'error');}
 };
 // ONBOARDING -- 3-step with smart button visibility
-let obRole = '', obSubjects = [], obClasses = [];
-
-function _hideAllObBtns(){
-  ['obNextBtn1','obNextBtn2','obDoneBtn','obDoneTeacherBtn'].forEach(b=>{
-    const el=document.getElementById(b); if(el) el.style.display='none';
-  });
-}
-function obShowBtn(id){
-  _hideAllObBtns();
-  const el=document.getElementById(id); if(el) el.style.display='';
-}
-
-window.obSelectRole = function(r){
-  obRole=r;
-  document.getElementById('obRoleS').className='ob-role-card'+(r==='student'?' sel-s':'');
-  document.getElementById('obRoleT').className='ob-role-card'+(r==='teacher'?' sel-t':'');
-  const cs=document.getElementById('obCheckS'), ct=document.getElementById('obCheckT');
-  const SVG_CHECK='<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,8 8.5,2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  if(cs) cs.innerHTML=r==='student'?SVG_CHECK:'';
-  if(ct) ct.innerHTML=r==='teacher'?SVG_CHECK:'';
-  // Show Next only after role is picked
-  obShowBtn('obNextBtn1');
-};
-
-function obAnimateStep(el){
-  if(!el) return;
-  el.classList.remove('ob-step-enter');
-  void el.offsetWidth;
-  el.classList.add('ob-step-enter');
-  el.addEventListener('animationend',()=>el.classList.remove('ob-step-enter'),{once:true});
-}
-window.obNext = function(from){
-  if(from===1){
-    if(!obRole){ toast('Please select Student or Teacher','error'); return; }
-    document.getElementById('obStep1').classList.add('hidden');
-    const s2=document.getElementById('obStep2');
-    s2.classList.remove('hidden');
-    obAnimateStep(s2);
-    // Show Next immediately if name already pre-filled, else hide
-    const preN=document.getElementById('obName').value.trim();
-    obShowBtn(preN?'obNextBtn2':'__none__');
-    setTimeout(()=>document.getElementById('obName')?.focus(), 100);
-  } else if(from===2){
-    const name=document.getElementById('obName').value.trim();
-    if(!name){ toast('Please enter your name','error'); return; }
-    document.getElementById('obStep2').classList.add('hidden');
-    if(obRole==='student'){
-      const sf=document.getElementById('obStudentFields');
-      sf.classList.remove('hidden');
-      obAnimateStep(sf);
-    } else {
-      const tf=document.getElementById('obTeacherFields');
-      tf.classList.remove('hidden');
-      obAnimateStep(tf);
-    }
-    // Hide done btn until fields are filled
-    _hideAllObBtns();
-  }
-};
-
-// Name input: show Next when non-empty
-document.getElementById('obName')?.addEventListener('input',()=>{
-  const v=document.getElementById('obName').value.trim();
-  const btn=document.getElementById('obNextBtn2');
-  if(btn && !document.getElementById('obStep2').classList.contains('hidden'))
-    btn.style.display=v?'':'none';
-});
-document.getElementById('obName')?.addEventListener('keydown',e=>{
-  if(e.key==='Enter'){ e.preventDefault(); window.obNext(2); }
-});
-
-window.obChip = function(el){
-  document.querySelectorAll('.ob-chip').forEach(c=>c.classList.remove('sel'));
-  el.classList.add('sel');
-  document.getElementById('obClass').value=el.dataset.val;
-  obShowBtn('obDoneBtn');
-};
-
-// Class free-text: show done when non-empty
-document.getElementById('obClass')?.addEventListener('input',()=>{
-  const v=document.getElementById('obClass').value.trim();
-  document.querySelectorAll('.ob-chip').forEach(c=>c.classList.toggle('sel',c.dataset.val===v));
-  const btn=document.getElementById('obDoneBtn');
-  if(btn) btn.style.display=v?'':'none';
-});
-
-window.obAddSubj = function(){
-  const inp=document.getElementById('obSubjInp'), v=inp.value.trim();
-  if(!v) return;
-  if(!obSubjects.includes(v)) obSubjects.push(v);
-  inp.value=''; inp.focus(); obRenderSubjs();
-  // Show done btn when at least 1 subject added
-  if(obSubjects.length>0) obShowBtn('obDoneTeacherBtn');
-};
-function obRenderSubjs(){
-  const el=document.getElementById('obSubjTags'); if(!el) return;
-  el.innerHTML=obSubjects.map((s,i)=>
-    '<div class="ob-subj-tag">'+s+'<button class="ob-subj-rm" onclick="obRmSubj('+i+')">&#215;</button></div>'
-  ).join('');
-}
-window.obRmSubj=function(i){
-  obSubjects.splice(i,1); obRenderSubjs();
-  if(obSubjects.length===0) _hideAllObBtns();
-};
-
-window.obAddClass = function(){
-  const inp=document.getElementById('obClassInp'), v=inp.value.trim();
-  if(!v) return;
-  if(!obClasses.includes(v)) obClasses.push(v);
-  inp.value=''; inp.focus(); obRenderClasses();
-};
-function obRenderClasses(){
-  const el=document.getElementById('obClassTags'); if(!el) return;
-  el.innerHTML=obClasses.map((c,i)=>
-    '<div class="ob-subj-tag" style="background:rgba(0,212,170,.12);border-color:rgba(0,212,170,.25);color:var(--accent3);">'+c+'<button class="ob-subj-rm" onclick="obRmClass('+i+')">&#215;</button></div>'
-  ).join('');
-  document.querySelectorAll('#obTeacherFields .ob-chip[data-val]').forEach(ch=>{
-    ch.classList.toggle('sel', obClasses.includes(ch.dataset.val));
-  });
-}
-window.obRmClass=function(i){ obClasses.splice(i,1); obRenderClasses(); };
-window.obToggleClassChip=function(el){
-  const v=el.dataset.val;
-  if(obClasses.includes(v)) obClasses=obClasses.filter(c=>c!==v);
-  else obClasses.push(v);
-  obRenderClasses();
-};
-
-document.getElementById('obSubjInp')?.addEventListener('keydown',e=>{
-  if(e.key==='Enter'){e.preventDefault();window.obAddSubj();}
-});
-
-async function obSubmit(){
-  const name=document.getElementById('obName').value.trim();
-  if(!name){ toast('Enter your name first','error'); return; }
-  if(!obRole){ toast('Select a role first','error'); return; }
-  const btnId=obRole==='student'?'obDoneBtn':'obDoneTeacherBtn';
-  const btn=document.getElementById(btnId);
-  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
-  const d={role:obRole,displayName:name,updatedAt:Date.now()};
-  if(obRole==='student'){
-    d.className=document.getElementById('obClass').value.trim();
-  } else {
-    if(!obSubjects.length){ if(btn){btn.disabled=false;btn.textContent='Get Started →';} return toast('Add at least one subject','error'); }
-    d.subjects=[...obSubjects];
-    d.classes=[...obClasses];
-    d.session=document.getElementById('obSession').value.trim();
-  }
-  try{
-    await setDoc(prRef(),d);
-    profile=d; saveProfileToCache(d); updateRole();
-    document.getElementById('onboardScreen').classList.add('hidden');
-    hideSplash();
-    document.getElementById('appScreen').classList.remove('hidden');
-    await loadAll();
-    toast('Welcome, '+name.split(' ')[0]+'!','success');
-  } catch(e){ toast('Save failed: '+e.message,'error'); }
-  if(btn){ btn.disabled=false; btn.textContent='Get Started →'; }
-}
-
 // AUTH
 let loaded = false;
 
@@ -2079,6 +1919,13 @@ async function bootApp(user) {
         document.getElementById('onboardScreen').classList.remove('hidden');
         sbSetPage?.('onboard');
         window._sbRefreshLayout?.();
+        // Lazy-load onboarding — only fetched for first-time users, never
+        // downloaded by the far more common returning-user boot path.
+        const { initOnboarding } = await import('./features/onboarding.js');
+        initOnboarding({
+          toast, prRef, setDoc, saveProfileToCache, updateRole, hideSplash, loadAll,
+          setProfile: p => { profile = p; },
+        });
       } else {
         hideSplash();
         document.getElementById('appScreen').classList.remove('hidden');
@@ -2394,7 +2241,8 @@ document.getElementById('cancelEditStudentBtn')?.addEventListener('click', close
 document.getElementById('saveEditStudentBtn')?.addEventListener('click', saveEditStudent);
 document.getElementById('editStudentModal')?.addEventListener('click', e=>{ if(e.target===document.getElementById('editStudentModal')) closeEditStudentModal(); });
 document.getElementById('editStudentNameInp')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){e.preventDefault();saveEditStudent();} });
-window.obSubmit = obSubmit;
+// window.obSubmit is bound by initOnboarding() in js/features/onboarding.js,
+// only once that lazy chunk actually loads (first-time users).
 window.openProfileModal=openProfileModal;
 // Expose helpers for inline onclick handlers
 window.isT = isT;
