@@ -1,11 +1,21 @@
 // Auth proxy — tunnels Firebase's auth UI through the custom Pages domain.
-// Firebase SDK is initialised with authDomain = current hostname (served by /api/config).
-// Every /__/auth/* request the SDK or browser makes is forwarded to
-// <projectId>.firebaseapp.com, and HTML/JS responses have domain references rewritten
-// so everything stays on the custom domain.
 //
-// REQUIREMENT: the Pages hostname must be added to Firebase Console →
-// Authentication → Authorized domains, or Google OAuth will reject the redirect_uri.
+// STATUS: ACTIVE. /api/config sets authDomain to this Pages domain, so the
+// Firebase SDK navigates here for /__/auth/* during sign-in and this file
+// runs on every request.
+//
+// REQUIRES, or Google sign-in fails with redirect_uri_mismatch:
+//   Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client
+//   ID "Web client (auto created by Google Service)" for this Firebase
+//   project → Authorized redirect URIs → add:
+//     https://<this-pages-domain>/__/auth/handler
+//   (Firebase Console → Authentication → Authorized domains is a DIFFERENT
+//   list — it authorizes initiating sign-in, it does not register this
+//   redirect URI with Google. Both are required.)
+//
+// Test both signInWithPopup (desktop) and signInWithRedirect (the mobile
+// fallback in sign.html/app.js) end-to-end — redirect is the path that
+// actually round-trips through this proxy and is most likely to break.
 //
 // Required secret: FB1_PROJECT_ID
 
@@ -62,9 +72,6 @@ export async function onRequest(context) {
   const rh = new Headers(upstream.headers);
 
   // ── Strip headers that break Firebase's auth mechanism ─────────────────────
-  // X-Frame-Options / COOP: would prevent the /__/auth/iframe from being embedded
-  //   or break window.opener in the OAuth popup.
-  // CSP: might block Firebase SDK scripts or the domain-rewritten URLs.
   rh.delete('X-Frame-Options');
   rh.delete('Content-Security-Policy');
   rh.delete('Content-Security-Policy-Report-Only');
@@ -83,9 +90,6 @@ export async function onRequest(context) {
   const contentType = rh.get('Content-Type') || '';
 
   // ── Domain rewrite for HTML/JS responses ───────────────────────────────────
-  // Replaces references to {projectId}.firebaseapp.com with our custom domain
-  // so that all URLs (OAuth redirect_uri, postMessage targetOrigin, etc.) stay
-  // on feetracker2.pages.dev throughout the auth flow.
   if (contentType.includes('text/html') || contentType.includes('javascript')) {
     const body      = await upstream.text();
     const rewritten = body
