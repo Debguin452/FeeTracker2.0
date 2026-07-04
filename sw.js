@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v14';
+const CACHE_VERSION = 'ft-v15';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
