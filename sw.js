@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v15';
+const CACHE_VERSION = 'ft-v16';
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
@@ -325,7 +325,16 @@ async function swrShell(request) {
   const tid   = setTimeout(() => ctrl.abort(), 2500);
   let networkRes = null;
   try {
-    networkRes = await fetch(new Request(request, { signal: ctrl.signal }));
+    // IMPORTANT: navigation requests arrive with redirect:'manual' (spec
+    // default for FetchEvent navigations). new Request(request,{...}) with
+    // only `signal` set inherits that mode silently. Cloudflare Pages
+    // 308-redirects .html paths to their clean-URL form (e.g. /sign.html ->
+    // /sign), so fetch() then returns an opaqueredirect response — which
+    // Chrome refuses to let respondWith() use, producing ERR_FAILED /
+    // "This site can't be reached" instead of the actual page. Forcing
+    // redirect:'follow' here makes the SW follow it like a normal browser
+    // request would.
+    networkRes = await fetch(new Request(request, { signal: ctrl.signal, redirect: 'follow' }));
     clearTimeout(tid);
     if (networkRes.ok) {
       cache.put(request, networkRes.clone());
@@ -349,11 +358,11 @@ async function cacheFirst(request, cacheName) {
   const cache  = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) {
-    fetch(request).then(r => { if (r.ok) cache.put(request, r.clone()); }).catch(() => {});
+    fetch(new Request(request, { redirect: 'follow' })).then(r => { if (r.ok) cache.put(request, r.clone()); }).catch(() => {});
     return cached;
   }
   try {
-    const res = await fetch(request);
+    const res = await fetch(new Request(request, { redirect: 'follow' }));
     if (res.ok) await cache.put(request, res.clone());
     return res;
   } catch {
@@ -363,7 +372,7 @@ async function cacheFirst(request, cacheName) {
 
 async function networkFirst(request) {
   try {
-    const res = await fetch(request);
+    const res = await fetch(new Request(request, { redirect: 'follow' }));
     if (res.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
       await cache.put(request, res.clone());
