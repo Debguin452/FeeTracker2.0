@@ -85,6 +85,25 @@
     .primary-btn:active{transform:scale(.98);}
     .primary-btn:disabled{opacity:.55;cursor:not-allowed;}
 
+    /* Loading feedback — disabled buttons look inert otherwise, easy to
+       mistake for broken while /api/config + Firebase init are in flight */
+    .google-btn:disabled::before,.primary-btn:disabled::before{
+      content:'';display:inline-block;width:14px;height:14px;margin-right:8px;
+      border-radius:50%;vertical-align:-2px;animation:spin .65s linear infinite;
+    }
+    .primary-btn:disabled::before{border:2px solid rgba(255,255,255,.3);border-top-color:#fff;}
+    .google-btn:disabled::before{border:2px solid var(--border2);border-top-color:var(--text2);}
+    .google-btn:disabled .g-icon{display:none;}
+
+    /* Turnstile shimmer — the box is otherwise empty until the widget
+       script finishes loading, which reads as a broken/missing element */
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    #tsWidget:empty{
+      width:100%;height:65px;border-radius:6px;
+      background:linear-gradient(90deg,var(--surface3) 25%,var(--border2) 50%,var(--surface3) 75%);
+      background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;
+    }
+
     /* Forgot / switch */
     .link-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
     .text-link{font-size:12px;color:var(--text2);cursor:pointer;text-decoration:underline;text-underline-offset:3px;background:none;border:none;font-family:'DM Sans',sans-serif;}

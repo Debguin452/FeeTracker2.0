@@ -127,7 +127,12 @@
   <div id="onboardScreen" class="hidden">
     <div class="ob-inner">
 
-      
+      <div class="ob-progress" id="obProgress">
+        <div class="ob-progress-dot active" data-step="1"></div>
+        <div class="ob-progress-dot" data-step="2"></div>
+        <div class="ob-progress-dot" data-step="3"></div>
+      </div>
+
       <div id="obStep1">
         <div class="ob-greeting">Hi there!</div>
         <div class="ob-sub">Tell us who you are to personalise Fee Tracker for you.</div>
@@ -152,6 +157,7 @@
 
       
       <div id="obStep2" class="hidden">
+        <button class="ob-back-link" onclick="obBack(2)">&larr; Back</button>
         <div class="ob-section-label" style="margin-top:0;">Your Name</div>
         <input class="ob-name-input" id="obName" type="text"
           placeholder="What should we call you?" maxlength="40" autocomplete="name">
@@ -160,6 +166,7 @@
 
       
       <div id="obStudentFields" class="hidden">
+        <button class="ob-back-link" onclick="obBack(3)">&larr; Back</button>
         <div class="ob-section-label">Your Class / Grade</div>
         <div class="ob-chips-grid">
           <div class="ob-chip" data-val="Class 9"    onclick="obChip(this)">Cls 9</div>
@@ -178,6 +185,7 @@
 
       
       <div id="obTeacherFields" class="hidden">
+        <button class="ob-back-link" onclick="obBack(3)">&larr; Back</button>
         <div class="ob-section-label">Subjects You Teach</div>
         <div class="ob-subj-tags" id="obSubjTags"></div>
         <div class="ob-add-row">
