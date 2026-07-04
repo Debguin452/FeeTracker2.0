@@ -127,6 +127,30 @@ function fmt(n){
   catch(e){ return '₹'+n.toLocaleString(); }
 }
 window._fmt=fmt;
+// For interpolating user-entered strings (names) into inline onclick="fn('...')"
+// attributes: escapes backslash+single-quote for the JS string literal, and
+// double-quote/angle-brackets for the surrounding HTML attribute. Previously
+// this was done inline as .replace(/'/g,"\'") at each call site, which is a
+// no-op — "\'" and "'" are the identical one-character string in JS, so any
+// name containing an apostrophe (O'Brien, D'Souza, ...) broke the button
+// with a JS syntax error at click time.
+function _escJsAttr(s){
+  return String(s||'')
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+// For interpolating user-entered strings (names) as visible HTML content —
+// e.g. <div class="sc-name">${_escHtml(st.name)}</div> — so a name
+// containing < or & renders as literal text instead of being parsed as HTML.
+function _escHtml(s){
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
 function _applyCurSymbol(){
   try{
     const sym=(0).toLocaleString(USER_LOCALE,{style:'currency',currency:USER_CURRENCY,minimumFractionDigits:0}).replace(/[0-9,. ]/g,'').trim();
@@ -1298,8 +1322,8 @@ function renderCards(){
       <div class="card-top">
         <div class="card-header">
           <div class="card-left">
-            <div class="teacher-name-row"><div class="teacher-name">${t.name}</div>${bdg}</div>
-            <div class="teacher-subject">${t.subject} · ${fmt(t.fee)}/mo</div>
+            <div class="teacher-name-row"><div class="teacher-name">${_escHtml(t.name)}</div>${bdg}</div>
+            <div class="teacher-subject">${_escHtml(t.subject)} · ${fmt(t.fee)}/mo</div>
             ${lps?`<div class="last-paid">Last paid: ${lps}</div>`:`<div class="last-paid never">Never paid</div>`}
           </div>
           <div class="due-badge">
@@ -1491,7 +1515,7 @@ function renderBatchDetail(bid){
     h+=`<div class="student-card ${cr?'sc-critical':ov?'sc-overdue':''}" style="animation-delay:${dl}s">
       <div class="sc-top"><div class="sc-header">
         <div class="sc-left">
-          <div class="sc-name-row"><div class="sc-avatar">${init}</div><div class="sc-name">${st.name}</div>${odB}</div>
+          <div class="sc-name-row"><div class="sc-avatar">${init}</div><div class="sc-name">${_escHtml(st.name)}</div>${odB}</div>
           <div class="sc-meta">${fmt(fee)}/mo</div>
           ${st.admissionDay?`<div class="sc-admission">Joined: <span>${st.admissionDay} ${MONTHS[st.admissionMonth-1]} ${st.admissionYear}</span></div>`:''}
           ${lps?`<div class="sc-last-paid">Last paid: ${lps}</div>`:`<div class="sc-last-paid never">Never paid</div>`}
@@ -1782,10 +1806,10 @@ function _renderStandaloneSection(){
         <button class="standalone-action-btn" onclick="event.stopPropagation();openEditStandaloneStudent('${s.id}')" style="color:var(--accent)">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:block;flex-shrink:0"><path d="M11 2l3 3-9 9H2v-3L11 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Edit
         </button>
-        <button class="standalone-action-btn" onclick="event.stopPropagation();promptAssignStandalone('${s.id}','${(s.name||'').replace(/'/g,"\'")}')">
+        <button class="standalone-action-btn" onclick="event.stopPropagation();promptAssignStandalone('${s.id}','${_escJsAttr(s.name||'')}')">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:block;flex-shrink:0"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="7.5" x2="11" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="5" x2="8" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Add to Batch
         </button>
-        <button class="standalone-action-btn del" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')" style="color:var(--red)">
+        <button class="standalone-action-btn del" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${_escJsAttr(s.name||'')}')" style="color:var(--red)">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:block;flex-shrink:0"><path d="M2.5 4.5h11M6.5 2.5h3M5.5 4.5l.5 9M10.5 4.5l-.5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete
         </button>
       </div>`}
@@ -2926,8 +2950,8 @@ function renderStudent(){
         <div class="card-top">
           <div class="card-header">
             <div class="card-left">
-              <div class="teacher-name-row"><div class="teacher-name">${t.name}</div>${bdg}</div>
-              <div class="teacher-subject">${t.subject} · ${fmt(t.fee)}/mo</div>
+              <div class="teacher-name-row"><div class="teacher-name">${_escHtml(t.name)}</div>${bdg}</div>
+              <div class="teacher-subject">${_escHtml(t.subject)} · ${fmt(t.fee)}/mo</div>
               ${lps?`<div class="last-paid">Last paid: ${lps}</div>`:`<div class="last-paid never">Never paid</div>`}
             </div>
             <div class="due-badge">
@@ -2970,8 +2994,8 @@ function renderTeacher(){
     const isSel=selItems.has(bid);
     h+=`<div class="batch-card" data-id="${bid}" style="animation-delay:${dl}s"
       onclick="if(selMode){event.stopPropagation();selTap('${bid}');return;}openBatchDetail('${bid}')" ontouchstart="void 0">
-      <div class="batch-header"><div><div class="batch-name">${b.name}</div><div class="batch-meta">${b.class?b.class+' · ':''} ${fmt(b.fee)}/mo per student${b.timing?' · '+b.timing:''}</div></div>${b.session?`<span class="batch-session-badge">${b.session}</span>`:''}</div>
-      <div class="batch-subject-list">${b.subject.split(',').map(s=>`<span class="batch-subj-chip">${s.trim()}</span>`).join('')}</div>
+      <div class="batch-header"><div><div class="batch-name">${_escHtml(b.name)}</div><div class="batch-meta">${b.class?b.class+' · ':''} ${fmt(b.fee)}/mo per student${b.timing?' · '+b.timing:''}</div></div>${b.session?`<span class="batch-session-badge">${b.session}</span>`:''}</div>
+      <div class="batch-subject-list">${b.subject.split(',').map(s=>`<span class="batch-subj-chip">${_escHtml(s.trim())}</span>`).join('')}</div>
       ${selMode?'':`<div class="batch-actions">
         <button class="batch-open-btn" onclick="event.stopPropagation();openBatchDetail('${bid}')" style="display:flex;align-items:center;gap:6px;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0" ><path d="M11 13v-1a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="6" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M14 13v-1a3 3 0 0 0-2-2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 3.2a2.5 2.5 0 0 1 0 4.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> View students ›</button>
         <button class="batch-del-btn" onclick="event.stopPropagation();deleteBatch('${bid}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;flex-shrink:0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
@@ -3006,7 +3030,7 @@ async function loadAndRenderStandaloneStudents(root){
             <div class="sc-left">
               <div class="sc-name-row">
                 <div class="sc-avatar">${(s.name||'S')[0].toUpperCase()}</div>
-                <div class="sc-name">${s.name||'Student'}</div>
+                <div class="sc-name">${_escHtml(s.name||'Student')}</div>
               </div>
               <div class="sc-meta">Individual · ${fmt(fee)}/mo</div>
               ${s.lastPaidDate?`<div class="sc-last-paid">Last paid: ${s.lastPaidDate}</div>`:'<div class="sc-last-paid never">Never paid</div>'}
@@ -3019,8 +3043,8 @@ async function loadAndRenderStandaloneStudents(root){
         </div>
         <div class="sc-actions">
           <div style="flex:1;padding:9px 13px;font-size:11px;color:var(--muted)">No batch assigned</div>
-          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="9" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${(s.name||'').replace(/'/g,"\'")}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="sc-edit-btn" onclick="event.stopPropagation();assignStandaloneToExistingBatch('${s.id}','${_escJsAttr(s.name||'')}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="9" y1="14" x2="15" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          <button class="sc-del-btn" onclick="event.stopPropagation();deleteStandaloneStudent('${s.id}','${_escJsAttr(s.name||'')}')"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>`;
     });
