@@ -1257,6 +1257,12 @@ select.field-input option { background: #1c1c38; color: var(--text); }
 #onboardScreen        { position: fixed; inset: 0; z-index: 500; background: var(--bg); overflow-y: auto; display: flex; flex-direction: column; animation: fadeIn .3s ease; }
 #onboardScreen.hidden { display: none !important; }
 .ob-inner             { width: 100%; max-width: 420px; margin: 0 auto; padding: 56px 22px 72px; }
+.ob-progress          { display: flex; justify-content: center; gap: 6px; margin-bottom: 28px; }
+.ob-progress-dot      { width: 22px; height: 4px; border-radius: 2px; background: var(--border2); transition: background .25s, width .25s; }
+.ob-progress-dot.active { background: var(--accent); width: 30px; }
+.ob-progress-dot.done   { background: var(--accent); }
+.ob-back-link         { display: block; background: none; border: none; padding: 0; margin-bottom: 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; }
+.ob-back-link:active  { color: var(--text); }
 
 .ob-logo     { font-family: 'Syne', sans-serif; font-size: 44px; font-weight: 800; background: linear-gradient(135deg, #7c6bff, #ff6b9d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin-bottom: 8px; }
 .ob-greeting { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; letter-spacing: -.3px; }
