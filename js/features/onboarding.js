@@ -173,4 +173,3 @@ export function initOnboarding(deps) {
     if (e.key === 'Enter') { e.preventDefault(); window.obAddSubj(); }
   });
 }
-  
