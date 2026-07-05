@@ -33,8 +33,12 @@
       border:1.5px solid var(--border);
       border-radius:14px;
       transition:border-color .2s;
+      width:100%;
+      box-sizing:border-box;
+      overflow:hidden;
     }
-    .ts-wrap iframe{border-radius:6px!important;display:block;}
+    #tsWidget{width:100%;display:flex;justify-content:center;}
+    .ts-wrap iframe{border-radius:6px!important;display:block;max-width:100%;}
   
     :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--red:#ff4d6d;}
     :root.light{--bg:#f0f0f8;--surface:#fff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--red:#d63050;}
@@ -85,15 +89,26 @@
     .primary-btn:active{transform:scale(.98);}
     .primary-btn:disabled{opacity:.55;cursor:not-allowed;}
 
-    /* Loading feedback — disabled buttons look inert otherwise, easy to
-       mistake for broken while /api/config + Firebase init are in flight */
-    .google-btn:disabled::before,.primary-btn:disabled::before{
+    /* Initial-load gate — shown only while /api/config + Firebase init are
+       in flight, removed the moment both buttons are enabled (see script at
+       bottom). Deliberately NOT a :disabled selector: setBusy() already
+       injects its own <span class="ring"> spinner for actual sign-in
+       actions, and buttons get .disabled=true for mutual exclusion while
+       the other one is submitting (e.g. emailBtn during Google sign-in) —
+       a blanket :disabled selector fired on all three of those at once,
+       stacking multiple spinners on top of each other.
+       Also using visibility (rather than removing the icon) is important:
+       the Google "G" icon uses fixed per-path colors, not currentColor, so
+       hiding it via a :disabled rule would double as an accidental
+       always-on rule for legitimate mutual-exclusion disabling too.
+       */
+    .btn-init-loading::before{
       content:'';display:inline-block;width:14px;height:14px;margin-right:8px;
       border-radius:50%;vertical-align:-2px;animation:spin .65s linear infinite;
     }
-    .primary-btn:disabled::before{border:2px solid rgba(255,255,255,.3);border-top-color:#fff;}
-    .google-btn:disabled::before{border:2px solid var(--border2);border-top-color:var(--text2);}
-    .google-btn:disabled .g-icon{display:none;}
+    .primary-btn.btn-init-loading::before{border:2px solid rgba(255,255,255,.3);border-top-color:#fff;}
+    .google-btn.btn-init-loading::before{border:2px solid var(--border2);border-top-color:var(--text2);}
+    .google-btn.btn-init-loading .g-icon{display:none;}
 
     /* Turnstile shimmer — the box is otherwise empty until the widget
        script finishes loading, which reads as a broken/missing element */
@@ -160,7 +175,7 @@
     <div class="ok-box"  id="okBox"></div>
 
     <!-- Google -->
-    <button class="google-btn" id="googleBtn" onclick="doGoogle()" disabled>
+    <button class="google-btn btn-init-loading" id="googleBtn" onclick="doGoogle()" disabled>
       <svg class="g-icon" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -190,7 +205,7 @@
     <!-- Cloudflare Turnstile — bot protection for email/password flow -->
     <div class="ts-wrap"><div id="tsWidget"></div></div>
 
-    <button class="primary-btn" id="emailBtn" onclick="doEmail()" disabled>Sign In</button>
+    <button class="primary-btn btn-init-loading" id="emailBtn" onclick="doEmail()" disabled>Sign In</button>
 
     <div class="link-row">
       <button class="text-link" id="forgotLink" onclick="showReset()">Forgot password?</button>
@@ -496,7 +511,9 @@ window.doReset = async function() {
 
 // All handlers ready — enable sign-in buttons
 document.getElementById('googleBtn').disabled = false;
+document.getElementById('googleBtn').classList.remove('btn-init-loading');
 document.getElementById('emailBtn').disabled  = false;
+document.getElementById('emailBtn').classList.remove('btn-init-loading');
 </script>
 <div id="_signToast" class="_sign-toast"></div>
 </body>
