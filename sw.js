@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ft-v16';
+const CACHE_VERSION = 'ft-__CACHE_VERSION__'; // substituted by functions/sw.js.js at request time — see that file
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;

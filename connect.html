@@ -365,6 +365,10 @@
   function avatarColor(n){let h=0;for(let c of n)h=(h<<5)-h+c.charCodeAt(0);return COLORS[Math.abs(h)%COLORS.length];}
   function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
   function timeAgo(ts){if(!ts)return'';const s=Math.floor((Date.now()-(ts.toMillis?ts.toMillis():ts))/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+  // Teacher/student names, subjects, and class names are user-entered free
+  // text rendered as raw HTML content throughout this page — escape before
+  // interpolating so a name containing < or & can't corrupt the markup.
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
   /* ── Theme ─────────────────────────────────────────────────────────────── */
   (function(){const s=localStorage.getItem('ft_theme');const dark=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(!dark)document.documentElement.classList.add('light');})();
@@ -435,12 +439,19 @@
     setHTML('teacherListWrap',filtered.map(t=>{
       const col=avatarColor(t.name||'T');const ini=initials(t.name||'T');const status=connMap[t.id];
       const btn=status==='active'?`<button class="req-btn connected">Connected</button>`:status==='pending'?`<button class="req-btn sent">Requested</button>`:`<button class="req-btn primary" onclick="sendRequest('${t.id}','${(t.name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">Request</button>`;
-      return`<div class="tc-card"><div class="tc-avatar" style="background:${col};">${ini}</div><div class="tc-info"><div class="tc-name">${t.name||'&mdash;'}</div><div class="tc-meta">${[t.subject,t.classes?.join(', ')].filter(Boolean).join(' &middot; ')}</div></div><div><div class="tc-fee">${fmt(t.fee||0)}</div><div class="tc-fee-lbl">/month</div></div>${btn}</div>`;
+      return`<div class="tc-card"><div class="tc-avatar" style="background:${col};">${ini}</div><div class="tc-info"><div class="tc-name">${esc(t.name)||'&mdash;'}</div><div class="tc-meta">${esc([t.subject,t.classes?.join(', ')].filter(Boolean).join(' &middot; '))}</div></div><div><div class="tc-fee">${fmt(t.fee||0)}</div><div class="tc-fee-lbl">/month</div></div>${btn}</div>`;
     }).join(''));
   }
 
   const _cwl={};async function _cWriteLock(k){while(_cwl[k]){await new Promise(r=>setTimeout(r,80));}_cwl[k]=true;return()=>{delete _cwl[k];};}
   const _ccd={};function _cCooldown(k,ms){const n=Date.now();if(_ccd[k]&&n-_ccd[k]<ms)return false;_ccd[k]=n;return true;}
+  // The search input's oninput="filterTeachers()" and handleJoinLink() below
+  // both call filterTeachers(), but it was never defined — this is a module
+  // script, so plain function declarations don't leak to the global scope
+  // inline event handlers run in. renderTeacherList() already has the actual
+  // filter logic (reads #teacherSearch's value); alias it under the name the
+  // markup expects instead of touching every call site.
+  window.filterTeachers=renderTeacherList;
 
   window.sendRequest=async function(teacherId,teacherName){
     if(!_cCooldown('req_'+teacherId,5000)){toast('Please wait&hellip;');return;}
@@ -461,7 +472,7 @@
     setHTML('myConnListWrap',[...active,...pending].map(c=>{
       const t=tmap[c.teacherId]||{};const col=avatarColor(t.name||c.teacherName||'T');const ini=initials(t.name||c.teacherName||'T');
       const badge=c.status==='active'?'<span class="conn-badge">Connected</span>':'<span class="conn-badge pending">Pending</span>';
-      return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:12px;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${t.name||c.teacherName||'&mdash;'}</div><div class="tc-meta">${t.subject||''}</div></div>${badge}</div>`;
+      return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:12px;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${esc(t.name||c.teacherName)||'&mdash;'}</div><div class="tc-meta">${esc(t.subject)}</div></div>${badge}</div>`;
     }).join(''));
   }
 
@@ -522,13 +533,13 @@
     document.getElementById('hasProfileCard').style.display='';
     const col=avatarColor(p.name||'T');const ini=initials(p.name||'T');
     const url=`${location.origin}${location.pathname}?join=${cu.uid}`;
-    const pills=(p.classes||[]).map(c=>`<span class="profile-class-pill">${c}</span>`).join('');
+    const pills=(p.classes||[]).map(c=>`<span class="profile-class-pill">${esc(c)}</span>`).join('');
     document.getElementById('teacherProfileCard').innerHTML=`
       <div class="profile-card-top">
         <div class="profile-big-avatar" style="background:linear-gradient(135deg,${col},${col}cc);">${ini}</div>
         <div style="flex:1;min-width:0;">
-          <div class="profile-card-name">${p.name||'&mdash;'}</div>
-          <div class="profile-card-sub">${p.subject||''}</div>
+          <div class="profile-card-name">${esc(p.name)||'&mdash;'}</div>
+          <div class="profile-card-sub">${esc(p.subject)}</div>
           ${pills?`<div class="profile-classes">${pills}</div>`:''}
         </div>
       </div>
@@ -566,7 +577,7 @@
       if(rc)rc.textContent=reqs.length?`(${reqs.length})`:'';
       if(pc)pc.textContent=reqs.length;
       if(!reqs.length){setHTML('reqListWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No pending requests</div></div>');return;}
-      setHTML('reqListWrap',reqs.map(r=>`<div class="req-item" id="req_${r.id}"><div class="req-item-top"><div class="req-student-avatar">${initials(r.studentName||'S')}</div><div><div class="req-student-name">${r.studentName||'Student'}</div><div class="req-student-meta">${r.studentClass||''}</div></div><div class="req-time">${timeAgo(r.createdAt)}</div></div><div class="req-actions"><button class="req-accept" onclick="acceptRequest('${r.id}','${r.studentId}','${(r.studentName||'Student').replace(/'/g,"\\'")}')">Accept</button><button class="req-decline" onclick="declineRequest('${r.id}')">Decline</button></div></div>`).join(''));
+      setHTML('reqListWrap',reqs.map(r=>`<div class="req-item" id="req_${r.id}"><div class="req-item-top"><div class="req-student-avatar">${initials(r.studentName||'S')}</div><div><div class="req-student-name">${esc(r.studentName)||'Student'}</div><div class="req-student-meta">${esc(r.studentClass)}</div></div><div class="req-time">${timeAgo(r.createdAt)}</div></div><div class="req-actions"><button class="req-accept" onclick="acceptRequest('${r.id}','${r.studentId}','${(r.studentName||'Student').replace(/'/g,"\\'")}')">Accept</button><button class="req-decline" onclick="declineRequest('${r.id}')">Decline</button></div></div>`).join(''));
     }catch(e){console.warn('requests:',e.message);}
   }
 
@@ -599,7 +610,7 @@
       if(!conns.length){setHTML('connStudentsWrap','<div class="empty" style="padding:20px 0;"><div class="empty-txt">No connected students yet</div></div>');return;}
       setHTML('connStudentsWrap',conns.map(c=>{
         const col=avatarColor(c.studentName||'S');const ini=initials(c.studentName||'S');
-        return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:50%;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${c.studentName||'Student'}</div><div class="tc-meta">${c.studentClass||''}</div></div><span class="conn-badge">Active</span></div>`;
+        return`<div class="conn-item"><div class="tc-avatar" style="background:${col};width:40px;height:40px;border-radius:50%;font-size:15px;">${ini}</div><div class="tc-info"><div class="tc-name">${esc(c.studentName)||'Student'}</div><div class="tc-meta">${esc(c.studentClass)}</div></div><span class="conn-badge">Active</span></div>`;
       }).join(''));
     }catch(e){console.warn('students:',e.message);}
   }
@@ -613,7 +624,7 @@
     if(!val)return;
     if([...document.querySelectorAll('#setupClassChips .chip')].map(c=>c.dataset.val).includes(val)){toast('Batch already added');input.value='';return;}
     const chip=document.createElement('div');chip.className='chip selected removable';chip.dataset.val=val;
-    chip.innerHTML=`${val}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
+    chip.innerHTML=`${esc(val)}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
     chip.onclick=function(e){if(e.target.classList.contains('chip-remove'))return;chip.classList.toggle('selected');};
     document.getElementById('setupClassChips').appendChild(chip);input.value='';input.focus();
   };
@@ -636,7 +647,7 @@
           document.querySelectorAll('#setupClassChips .chip').forEach(ch=>ch.classList.toggle('selected',saved.includes(ch.dataset.val)));
           saved.filter(c=>!PRESET_CHIPS.includes(c)).forEach(val=>{
             const chip=document.createElement('div');chip.className='chip selected removable';chip.dataset.val=val;
-            chip.innerHTML=`${val}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
+            chip.innerHTML=`${esc(val)}<span class="chip-remove" onclick="this.parentElement.remove()">&times;</span>`;
             chip.onclick=function(e){if(e.target.classList.contains('chip-remove'))return;chip.classList.toggle('selected');};
             document.getElementById('setupClassChips').appendChild(chip);
           });
