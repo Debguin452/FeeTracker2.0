@@ -9,9 +9,15 @@ const ALLOWED_ORIGINS = [
 ];
 
 function getClientKey(request) {
-  const ip = request.headers.get('CF-Connecting-IP')
-    || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
-    || 'unknown';
+  // CF-Connecting-IP is set by Cloudflare's edge on every request that
+  // reaches Pages/Workers and cannot be spoofed by the client. The previous
+  // X-Forwarded-For fallback is a plain client-supplied header — an
+  // attacker could set it to anything, giving themselves a fresh rate-limit
+  // bucket on every request and defeating the limiter entirely. If
+  // CF-Connecting-IP is ever genuinely absent, everyone shares the
+  // 'unknown' bucket (overly strict, not exploitable) rather than trusting
+  // an attacker-controlled value.
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const url = new URL(request.url);
   const bucket = url.pathname.startsWith('/__/auth')    ? 'auth'
                : url.pathname.startsWith('/api/config') ? 'cfg'
@@ -40,12 +46,10 @@ export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
-  // Auth proxy — pass untouched; adding headers here breaks Firebase's iframe/popup flow
   if (url.pathname.startsWith('/__/auth')) {
     return next();
   }
 
-  // Static assets — skip rate-limit and security headers
   const isStatic =
     url.pathname.startsWith('/icons/')  ||
     url.pathname.startsWith('/css/')    ||
@@ -96,6 +100,36 @@ export async function onRequest(context) {
   secHeaders.set('X-Frame-Options',        'DENY');
   secHeaders.set('Referrer-Policy',        'strict-origin-when-cross-origin');
   secHeaders.set('Permissions-Policy',     'geolocation=(), microphone=(), camera=()');
+
+  // Content-Security-Policy — Report-Only for now, deliberately.
+  // This app relies on ~100+ inline onclick="..." handlers and inline
+  // <style> blocks throughout app.html/sign.html/connect.html (a direct
+  // consequence of app.js being a `type="module"` script, which doesn't
+  // leak function names to the global scope inline handlers need — see
+  // the window.X = ... bridging pattern noted elsewhere in this file).
+  // An ENFORCED CSP without 'unsafe-inline' on script-src would break
+  // every one of those handlers immediately. Report-Only logs violations
+  // to the console without blocking anything, so this can be verified
+  // safe first. To switch to enforced: rename this header to
+  // 'Content-Security-Policy', then open the app with devtools console
+  // open and click through sign-in (Google + email), the dashboard, and
+  // recording a payment — zero CSP violation messages means it's safe to
+  // switch. Removing 'unsafe-inline' entirely requires migrating the
+  // inline onclick handlers to addEventListener first (a separate,
+  // larger refactor — don't attempt both changes at once).
+  secHeaders.set('Content-Security-Policy-Report-Only', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com https://apis.google.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firebasestorage.googleapis.com https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com https://accounts.google.com https://*.firebaseapp.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://accounts.google.com",
+    "frame-ancestors 'none'",
+  ].join('; '));
 
   if (url.pathname.startsWith('/api/')) {
     secHeaders.set('Cache-Control', 'no-store');
