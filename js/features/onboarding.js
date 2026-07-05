@@ -92,6 +92,14 @@ export function initOnboarding(deps) {
     obShowBtn('obNextBtn1');
   };
 
+  function obSetStep(n) {
+    document.querySelectorAll('#obProgress .ob-progress-dot').forEach(dot => {
+      const s = Number(dot.dataset.step);
+      dot.classList.toggle('active', s === n);
+      dot.classList.toggle('done', s < n);
+    });
+  }
+
   window.obNext = function (from) {
     if (from === 1) {
       if (!obRole) { toast('Please select Student or Teacher', 'error'); return; }
@@ -99,6 +107,7 @@ export function initOnboarding(deps) {
       const s2 = document.getElementById('obStep2');
       s2.classList.remove('hidden');
       obAnimateStep(s2);
+      obSetStep(2);
       const preN = document.getElementById('obName').value.trim();
       obShowBtn(preN ? 'obNextBtn2' : '__none__');
       setTimeout(() => document.getElementById('obName')?.focus(), 100);
@@ -106,6 +115,7 @@ export function initOnboarding(deps) {
       const name = document.getElementById('obName').value.trim();
       if (!name) { toast('Please enter your name', 'error'); return; }
       document.getElementById('obStep2').classList.add('hidden');
+      obSetStep(3);
       if (obRole === 'student') {
         const sf = document.getElementById('obStudentFields');
         sf.classList.remove('hidden');
@@ -116,6 +126,27 @@ export function initOnboarding(deps) {
         obAnimateStep(tf);
       }
       _hideAllObBtns();
+    }
+  };
+
+  // from = the step being left (2 = leaving name step back to role select,
+  // 3 = leaving the student/teacher details step back to name)
+  window.obBack = function (from) {
+    if (from === 2) {
+      document.getElementById('obStep2').classList.add('hidden');
+      const s1 = document.getElementById('obStep1');
+      s1.classList.remove('hidden');
+      obAnimateStep(s1);
+      obSetStep(1);
+    } else if (from === 3) {
+      document.getElementById('obStudentFields').classList.add('hidden');
+      document.getElementById('obTeacherFields').classList.add('hidden');
+      const s2 = document.getElementById('obStep2');
+      s2.classList.remove('hidden');
+      obAnimateStep(s2);
+      obSetStep(2);
+      const name = document.getElementById('obName').value.trim();
+      obShowBtn(name ? 'obNextBtn2' : '__none__');
     }
   };
 
