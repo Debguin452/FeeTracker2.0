@@ -23,7 +23,6 @@ export async function onRequest(context) {
   const { request, params, env } = context;
   const url = new URL(request.url);
 
-  // ── CORS preflight ─────────────────────────────────────────────────────────
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -44,18 +43,17 @@ export async function onRequest(context) {
 
   const firebaseAuthDomain = `${projectId}.firebaseapp.com`;
 
-  // Build upstream path from catch-all params
   const pathSegments = params.path;
   const upstreamPath = `/__/auth/${Array.isArray(pathSegments) ? pathSegments.join('/') : (pathSegments || '')}`;
   const upstreamUrl  = `https://${firebaseAuthDomain}${upstreamPath}${url.search}`;
 
-  // Forward headers — fix Host, strip Cloudflare-injected headers
   const proxyHeaders = new Headers(request.headers);
   proxyHeaders.set('Host', firebaseAuthDomain);
   proxyHeaders.delete('CF-Connecting-IP');
   proxyHeaders.delete('CF-Ray');
   proxyHeaders.delete('CF-Visitor');
   proxyHeaders.delete('X-Forwarded-For');
+  proxyHeaders.delete('Accept-Encoding');
 
   let upstream;
   try {
@@ -71,15 +69,17 @@ export async function onRequest(context) {
 
   const rh = new Headers(upstream.headers);
 
-  // ── Strip headers that break Firebase's auth mechanism ─────────────────────
   rh.delete('X-Frame-Options');
   rh.delete('Content-Security-Policy');
   rh.delete('Content-Security-Policy-Report-Only');
   rh.delete('Cross-Origin-Opener-Policy');
   rh.delete('Cross-Origin-Embedder-Policy');
   rh.delete('X-Content-Type-Options');
+  rh.delete('Set-Cookie');
+  rh.delete('Content-Length');
+  rh.delete('Content-Encoding');
+  rh.delete('Transfer-Encoding');
 
-  // ── CORS: reflect the request Origin (credentials-safe) ────────────────────
   const reqOrigin = request.headers.get('Origin');
   if (reqOrigin) {
     rh.set('Access-Control-Allow-Origin',      reqOrigin);
@@ -89,8 +89,7 @@ export async function onRequest(context) {
 
   const contentType = rh.get('Content-Type') || '';
 
-  // ── Domain rewrite for HTML/JS responses ───────────────────────────────────
-  if (contentType.includes('text/html') || contentType.includes('javascript')) {
+  if (contentType.includes('text/html') || contentType.includes('javascript') || contentType.includes('json')) {
     const body      = await upstream.text();
     const rewritten = body
       .replaceAll(`https://${firebaseAuthDomain}`, url.origin)
