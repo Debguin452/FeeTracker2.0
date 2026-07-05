@@ -2036,7 +2036,12 @@ function _resetSignInBtn() {
   document.getElementById('avatarEl')?.classList.remove('loading');
 }
 
-setPersistence(auth, browserLocalPersistence).catch(()=>{});
+// MUST be awaited before getRedirectResult() below — Firebase reads the
+// pending redirect sign-in state through whatever persistence layer is
+// currently active. Firing this without awaiting risked getRedirectResult()
+// running against the pre-swap persistence layer and silently missing a
+// just-completed mobile redirect sign-in.
+await setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
 // Handle redirect-based sign-in returning to the page
 getRedirectResult(auth).then(async r => {
@@ -2147,8 +2152,11 @@ setTimeout(async () => {
   if (cachedProfile && cachedProfile.role) {
     await _bootFromCache(_cachedUidSnapshot, cachedProfile);
   } else {
-    // No current user, no cached profile — Firebase must be genuinely down.
-    // Redirect so the user can sign in again.
+    // No current user, no cached profile — Firebase must be genuinely down,
+    // or the session couldn't be established. Flag this before redirecting
+    // so sign.html breaks the loop instead of bouncing straight back here
+    // just because ft_uid is still (stale-)set.
+    try { sessionStorage.setItem('ft_bounce', '1'); } catch(e) {}
     location.replace('./sign.html');
   }
 }, 10000);
