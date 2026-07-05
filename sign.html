@@ -12,8 +12,21 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <script>
-    // Already signed in → app
-    try { if (localStorage.getItem('ft_uid')) location.replace('./app.html'); } catch(e) {}
+    // Already signed in → app. But if app.html just bounced back HERE (its
+    // own last-resort timers gave up finding a real Firebase session), don't
+    // immediately bounce back to app.html again — that's an infinite,
+    // invisible ping-pong loop with no way out for the user. Break it after
+    // one round-trip instead: treat the session as invalid and show the
+    // normal sign-in form.
+    try {
+      if (sessionStorage.getItem('ft_bounce') === '1') {
+        sessionStorage.removeItem('ft_bounce');
+        localStorage.removeItem('ft_uid');
+        window._ft_showSessionExpired = true; // picked up once toast() exists below
+      } else if (localStorage.getItem('ft_uid')) {
+        location.replace('./app.html');
+      }
+    } catch(e) {}
     // Theme
     try {
       var t=localStorage.getItem('ft_theme');
@@ -356,6 +369,7 @@ function toast(msg, type) {
   t.className = '_sign-toast show' + (type ? ' ' + type : '');
   _toastTimer = setTimeout(() => { t.className = '_sign-toast'; _toastTimer = null; }, 3000);
 }
+if (window._ft_showSessionExpired) toast('Your session expired — please sign in again.', 'error');
 
 /* ── Auth state: if already signed in → redirect immediately ─────────────── */
 let _redirected = false;
@@ -418,8 +432,24 @@ function setBusy(id, busy, label) {
 /* ── Google sign-in ──────────────────────────────────────────────────────── */
 window.doGoogle = async function() {
   clearMsgs();
+
+  // ── Turnstile verification — was missing entirely; only doEmail() had it ──
+  if (!_tsToken) {
+    showErr('errBox', 'Please complete the security check above.');
+    return;
+  }
   setBusy('googleBtn', true, 'Continue with Google');
   document.getElementById('emailBtn').disabled = true;
+  const tsOk = await verifyTurnstile();
+  if (!tsOk) {
+    showErr('errBox', 'Security check failed. Please refresh and try again.');
+    setBusy('googleBtn', false, 'Continue with Google');
+    document.getElementById('emailBtn').disabled = false;
+    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
+    _tsToken = null;
+    return;
+  }
+
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
