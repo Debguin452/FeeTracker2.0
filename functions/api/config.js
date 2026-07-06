@@ -46,7 +46,7 @@ export async function onRequest({ env, request }) {
     });
   }
 
-  const authDomain = new URL(request.url).hostname;
+  const authDomain = `${env.FB1_PROJECT_ID}.firebaseapp.com`;
 
   const config = {
     firebase: {
