@@ -1,6 +1,5 @@
 const RL_WINDOW_MS = 60_000;
 const RL_GLOBAL    = 120;
-const RL_AUTH      = 30;
 const RL_CONFIG    = 20;
 
 const ALLOWED_ORIGINS = [
@@ -19,14 +18,11 @@ function getClientKey(request) {
   // an attacker-controlled value.
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const url = new URL(request.url);
-  const bucket = url.pathname.startsWith('/__/auth')    ? 'auth'
-               : url.pathname.startsWith('/api/config') ? 'cfg'
-               : 'global';
+  const bucket = url.pathname.startsWith('/api/config') ? 'cfg' : 'global';
   return `rl:${ip}:${bucket}`;
 }
 
 function getLimit(pathname) {
-  if (pathname.startsWith('/__/auth'))    return RL_AUTH;
   if (pathname.startsWith('/api/config')) return RL_CONFIG;
   return RL_GLOBAL;
 }
@@ -45,10 +41,6 @@ async function checkRateLimit(env, key, limit) {
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
-
-  if (url.pathname.startsWith('/__/auth')) {
-    return next();
-  }
 
   const isStatic =
     url.pathname.startsWith('/icons/')  ||
