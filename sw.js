@@ -36,7 +36,7 @@ const BYPASS_PATTERNS = [
 ];
 
 // Same-origin paths that must always hit the network — never cache config or auth proxy
-const API_BYPASS = ['/api/', '/__/auth/'];
+const API_BYPASS = ['/api/'];
 
 const MAX_RUNTIME_ENTRIES = 80;
 const MAX_RUNTIME_AGE_MS  = 7 * 24 * 60 * 60 * 1000;
