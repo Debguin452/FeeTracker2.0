@@ -827,8 +827,8 @@ body { letter-spacing: -.01em; }
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .card-left   { flex: 1; min-width: 0; padding-right: 12px; }
 
-.teacher-name-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 3px; }
-.teacher-name     { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.2px; }
+.teacher-name-row { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; min-width: 0; }
+.teacher-name     { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
 .teacher-subject  { font-size: 12px; color: var(--text2); margin-top: 2px; }
 .last-paid        { font-size: 11px; color: var(--accent3); margin-top: 4px; font-weight: 500; }
 .last-paid.never  { color: var(--red); opacity: .7; }
@@ -1118,8 +1118,8 @@ select.field-input option { background: #1c1c38; color: var(--text); }
 .confirm-overlay.hidden { display: none !important; animation: none; }
 .confirm-box            { background: #1a1a30; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; padding: 24px; width: 100%; max-width: 300px; box-shadow: 0 20px 70px rgba(0,0,0,.7); animation: slideUp .2s ease; }
 .confirm-icon           { font-size: 30px; margin-bottom: 10px; text-align: center; }
-.confirm-title          { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #ebebf5; margin-bottom: 7px; text-align: center; }
-.confirm-msg            { font-size: 13px; color: #8e8eb8; line-height: 1.6; margin-bottom: 20px; text-align: center; }
+.confirm-title          { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #ebebf5; margin-bottom: 7px; text-align: center; overflow-wrap: break-word; }
+.confirm-msg            { font-size: 13px; color: #8e8eb8; line-height: 1.6; margin-bottom: 20px; text-align: center; overflow-wrap: break-word; }
 .confirm-actions        { display: flex; gap: 9px; }
 
 .menu-backdrop         { position: fixed; inset: 0; z-index: 99; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); animation: fadeIn .15s ease; }
@@ -1169,9 +1169,10 @@ select.field-input option { background: #1c1c38; color: var(--text); }
 .batch-card           { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); margin-bottom: 10px; overflow: hidden; animation: fadeUp .28s ease both; cursor: pointer; transition: border-color .15s, background .15s; }
 .batch-card:active    { background: var(--surface2); }
 .batch-header         { padding: 14px 14px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.batch-name           { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.2px; }
-.batch-meta           { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
-.batch-session-badge  { font-size: 9px; font-weight: 700; letter-spacing: .4px; padding: 3px 9px; border-radius: 20px; background: rgba(0,212,170,.1); color: var(--accent3); border: 1px solid rgba(0,212,170,.18); white-space: nowrap; flex-shrink: 0; text-transform: uppercase; }
+.batch-header > div:first-child { min-width: 0; flex: 1; }
+.batch-name           { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-meta           { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-session-badge  { font-size: 9px; font-weight: 700; letter-spacing: .4px; padding: 3px 9px; border-radius: 20px; background: rgba(0,212,170,.1); color: var(--accent3); border: 1px solid rgba(0,212,170,.18); white-space: nowrap; flex-shrink: 0; text-transform: uppercase; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .batch-subject-list   { display: flex; gap: 5px; flex-wrap: wrap; padding: 9px 14px 13px; }
 .batch-subj-chip      { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: var(--r-sm); background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
 .batch-actions        { display: flex; border-top: 1px solid var(--border); }
@@ -1210,9 +1211,9 @@ select.field-input option { background: #1c1c38; color: var(--text); }
 .sc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
 .sc-left   { flex: 1; min-width: 0; padding-right: 10px; }
 
-.sc-name-row    { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; }
+.sc-name-row    { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; min-width: 0; }
 .sc-avatar      { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent3), #009e7a); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
-.sc-name        { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+.sc-name        { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-overdue-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: rgba(255,154,60,.1); color: var(--accent4); border: 1px solid rgba(255,154,60,.2); letter-spacing: .3px; }
 .sc-overdue-badge.crit { background: rgba(255,77,109,.1); color: var(--red); border-color: rgba(255,77,109,.25); animation: pulse 2.5s infinite; }
 .sc-meta        { font-size: 10px; color: var(--text2); margin-top: 2px; }
