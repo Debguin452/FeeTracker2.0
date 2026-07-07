@@ -404,7 +404,7 @@ function errMsg(code) {
     'auth/wrong-password':          'Incorrect password.',
     'auth/invalid-credential':      'Incorrect email or password.',
     'auth/email-already-in-use':    'An account already exists with this email.',
-    'auth/weak-password':           'Password must be at least 6 characters.',
+    'auth/weak-password':           'Password must be at least 8 characters with a letter and a number.',
     'auth/invalid-email':           'Enter a valid email address.',
     'auth/too-many-requests':       'Too many attempts. Please wait and try again.',
     'auth/network-request-failed':  'Network error — check your connection.',
@@ -482,7 +482,8 @@ window.doEmail = async function() {
   if (!email) { showErr('errBox', 'Enter your email address.'); document.getElementById('emailInp').focus(); return; }
   if (!pass)  { showErr('errBox', 'Enter your password.'); document.getElementById('passInp').focus(); return; }
   if (_mode === 'register') {
-    if (pass.length < 6) { showErr('errBox', 'Password must be at least 6 characters.'); return; }
+    if (pass.length < 8) { showErr('errBox', 'Password must be at least 8 characters.'); return; }
+    if (!/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) { showErr('errBox', 'Password must contain at least one letter and one number.'); return; }
     if (pass !== confirm) { showErr('errBox', 'Passwords do not match.'); document.getElementById('confirmInp').focus(); return; }
   }
 
