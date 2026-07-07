@@ -1,6 +1,3 @@
-// Serves Firebase client config + Turnstile VAPID key to the front-end.
-// All secrets come from Cloudflare Pages environment variables — nothing is hardcoded.
-
 const ALLOWED_ORIGINS = [
   'https://feetracker2.pages.dev',
   'https://feetracker.pages.dev',
@@ -46,7 +43,11 @@ export async function onRequest({ env, request }) {
     });
   }
 
-  const authDomain = `${env.FB1_PROJECT_ID}.firebaseapp.com`;
+  // Use the actual Pages hostname as authDomain so the Firebase SDK routes
+  // /__/auth/* through our proxy on this domain instead of firebaseapp.com.
+  // On feetracker2.pages.dev this resolves to feetracker2.pages.dev;
+  // on feetracker.pages.dev it resolves to feetracker.pages.dev automatically.
+  const authDomain = new URL(request.url).hostname;
 
   const config = {
     firebase: {
@@ -59,14 +60,13 @@ export async function onRequest({ env, request }) {
         appId:             env.FB1_APP_ID,
       },
     },
-    vapidKey:         env.FCM_VAPID_KEY,
+    vapidKey: env.FCM_VAPID_KEY,
   };
 
   return new Response(JSON.stringify(config), {
     status: 200,
     headers: {
       'Content-Type':  'application/json',
-      // No caching — Firebase config + site keys must not be cached by CDN or browser
       'Cache-Control': 'no-store',
       ...corsHeaders,
     },
