@@ -8,14 +8,6 @@ const ALLOWED_ORIGINS = [
 ];
 
 function getClientKey(request) {
-  // CF-Connecting-IP is set by Cloudflare's edge on every request that
-  // reaches Pages/Workers and cannot be spoofed by the client. The previous
-  // X-Forwarded-For fallback is a plain client-supplied header — an
-  // attacker could set it to anything, giving themselves a fresh rate-limit
-  // bucket on every request and defeating the limiter entirely. If
-  // CF-Connecting-IP is ever genuinely absent, everyone shares the
-  // 'unknown' bucket (overly strict, not exploitable) rather than trusting
-  // an attacker-controlled value.
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const url = new URL(request.url);
   const bucket = url.pathname.startsWith('/api/config') ? 'cfg' : 'global';
@@ -42,6 +34,7 @@ export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
+  // Static assets — no middleware processing needed
   const isStatic =
     url.pathname.startsWith('/icons/')  ||
     url.pathname.startsWith('/css/')    ||
@@ -52,6 +45,13 @@ export async function onRequest(context) {
     url.pathname === '/sitemap.xml';
 
   if (isStatic) return next();
+
+  // Auth proxy — handled entirely by functions/__/auth/[[path]].js.
+  // Skip rate limiting AND security-header injection here: the proxy
+  // already strips/rewrites Firebase's own headers, and adding
+  // X-Frame-Options:DENY would break the hidden /__/auth/iframestart
+  // iframe that Firebase uses internally during signInWithPopup.
+  if (url.pathname.startsWith('/__/auth/')) return next();
 
   // Origin lock for /api/* routes
   if (url.pathname.startsWith('/api/')) {
@@ -84,7 +84,7 @@ export async function onRequest(context) {
     });
   }
 
-  // Security headers on all non-static responses
+  // Security headers on all non-static, non-auth-proxy responses
   const response   = await next();
   const secHeaders = new Headers(response.headers);
 
@@ -93,22 +93,10 @@ export async function onRequest(context) {
   secHeaders.set('Referrer-Policy',        'strict-origin-when-cross-origin');
   secHeaders.set('Permissions-Policy',     'geolocation=(), microphone=(), camera=()');
 
-  // Content-Security-Policy — Report-Only for now, deliberately.
-  // This app relies on ~100+ inline onclick="..." handlers and inline
-  // <style> blocks throughout app.html/sign.html/connect.html (a direct
-  // consequence of app.js being a `type="module"` script, which doesn't
-  // leak function names to the global scope inline handlers need — see
-  // the window.X = ... bridging pattern noted elsewhere in this file).
-  // An ENFORCED CSP without 'unsafe-inline' on script-src would break
-  // every one of those handlers immediately. Report-Only logs violations
-  // to the console without blocking anything, so this can be verified
-  // safe first. To switch to enforced: rename this header to
-  // 'Content-Security-Policy', then open the app with devtools console
-  // open and click through sign-in (Google + email), the dashboard, and
-  // recording a payment — zero CSP violation messages means it's safe to
-  // switch. Removing 'unsafe-inline' entirely requires migrating the
-  // inline onclick handlers to addEventListener first (a separate,
-  // larger refactor — don't attempt both changes at once).
+  // CSP — Report-Only while inline onclick handlers exist throughout the app.
+  // frame-src includes 'self' so the Firebase SDK can load its hidden
+  // /__/auth/iframestart iframe from our own domain (required when authDomain
+  // is set to this Pages hostname instead of firebaseapp.com).
   secHeaders.set('Content-Security-Policy-Report-Only', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://challenges.cloudflare.com https://apis.google.com",
@@ -116,7 +104,7 @@ export async function onRequest(context) {
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
     "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firebasestorage.googleapis.com https://challenges.cloudflare.com",
-    "frame-src https://challenges.cloudflare.com https://accounts.google.com https://*.firebaseapp.com",
+    "frame-src 'self' https://challenges.cloudflare.com https://accounts.google.com https://*.firebaseapp.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://accounts.google.com",
