@@ -4,6 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Sign In — Fee Tracker</title>
+  <meta name="description" content="Sign in to Fee Tracker to track tuition fee payments, manage student batches, and stay on top of dues.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="https://feetracker2.pages.dev/sign.html">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#080812" media="(prefers-color-scheme:dark)">
   <meta name="theme-color" content="#f0f0f8" media="(prefers-color-scheme:light)">
@@ -137,6 +140,11 @@
     .text-link{font-size:12px;color:var(--text2);cursor:pointer;text-decoration:underline;text-underline-offset:3px;background:none;border:none;font-family:'DM Sans',sans-serif;}
     .text-link:hover{color:var(--accent);}
 
+    /* Legal consent note */
+    .legal-note{margin-top:18px;text-align:center;font-size:11px;color:var(--muted);line-height:1.6;}
+    .legal-note a{color:var(--text2);text-decoration:underline;text-underline-offset:2px;}
+    .legal-note a:hover{color:var(--accent);}
+
     /* Error box */
     .err-box{background:rgba(255,77,109,.09);border:1px solid rgba(255,77,109,.25);border-radius:11px;padding:10px 13px;font-size:12px;color:var(--red);line-height:1.55;margin-bottom:14px;white-space:pre-wrap;display:none;}
     .err-box.show{display:block;}
@@ -224,6 +232,8 @@
       <button class="text-link" id="forgotLink" onclick="showReset()">Forgot password?</button>
       <button class="text-link" id="switchLink" onclick="switchMode('register')">Create account</button>
     </div>
+
+    <div class="legal-note">By continuing, you agree to our <a href="terms.html">Terms</a> &amp; <a href="privacy.html">Privacy Policy</a>.</div>
   </div>
 
   <!-- Password reset panel -->
@@ -527,14 +537,29 @@ window.doReset = async function() {
   showErr('resetErrBox',''); showOk('resetOkBox','');
   const email = document.getElementById('resetEmailInp').value.trim();
   if (!email) { showErr('resetErrBox', 'Enter your email address.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('resetErrBox', 'Enter a valid email address.'); return; }
   setBusy('resetBtn', true, 'Send Reset Link');
   try {
-    await sendPasswordResetEmail(auth, email);
-    showOk('resetOkBox', 'Reset link sent! Check your inbox.');
+    // Without actionCodeSettings, Firebase sends the User back to a bare,
+    // unbranded confirmation screen after they reset their password, with no
+    // way back into the app. Point `url` at this same page (on whichever
+    // domain issued the request — feetracker2.pages.dev today, feetracker.pages.dev
+    // after migration) so the "Continue" link on the reset page returns here.
+    await sendPasswordResetEmail(auth, email, {
+      url: location.origin + '/sign.html',
+      handleCodeInApp: false,
+    });
+    // Same message on true success and on "account doesn't exist" below —
+    // the wording must be identical in both cases, otherwise the response
+    // text itself reveals which emails are registered.
+    showOk('resetOkBox', 'If that email exists, a reset link has been sent.');
   } catch(e) {
     const code = e.code;
-    if (code === 'auth/user-not-found') showOk('resetOkBox', 'If that email exists, a reset link has been sent.');
-    else showErr('resetErrBox', errMsg(code) || 'Failed to send reset email.');
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
+      showOk('resetOkBox', 'If that email exists, a reset link has been sent.');
+    } else {
+      showErr('resetErrBox', errMsg(code) || 'Failed to send reset email. Please try again.');
+    }
   } finally {
     setBusy('resetBtn', false, 'Send Reset Link');
   }
