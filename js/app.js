@@ -914,7 +914,7 @@ window.payMonths=async function(id,type='full'){
     const v=parseInt(document.getElementById('pay-'+id).value);
     if(!v||v<1||v>max) return toast(`Enter 1\u2013${max}`,'error');
     const amt=v*t.fee;
-    if(!await confirm2('Confirm Payment',`Mark <strong style="color:#f0f0f8">${fmt(amt)}</strong> for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${t.name}?`,'Mark',_CI.pay)) return;
+    if(!await confirm2('Confirm Payment',`Mark <strong style="color:#f0f0f8">${fmt(amt)}</strong> for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${_escHtml(t.name)}?`,'Mark',_CI.pay)) return;
     const newPay={teacherId:id,teacherName:t.name,subject:t.subject,monthsPaid:v,amount:amt,type:'full',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){
       newPay.id='local_'+Date.now(); payments.push(newPay); saveToCache();
@@ -934,7 +934,7 @@ window.payMonths=async function(id,type='full'){
     const ex=partialBal(id), tot=ex+amt;
     if(tot>=t.fee) return toast(`Total ${fmt(tot)} covers full month — use Full tab`,'error');
     const rem=t.fee-tot;
-    if(!await confirm2('Partial Payment',`Record <strong style="color:#f0f0f8">${fmt(amt)}</strong> partial to ${t.name}?<br><small style="color:var(--muted)">Still owed: ${fmt(rem)}</small>`,'Record',_CI.part)) return;
+    if(!await confirm2('Partial Payment',`Record <strong style="color:#f0f0f8">${fmt(amt)}</strong> partial to ${_escHtml(t.name)}?<br><small style="color:var(--muted)">Still owed: ${fmt(rem)}</small>`,'Record',_CI.part)) return;
     const newPay2={teacherId:id,teacherName:t.name,subject:t.subject,amount:amt,type:'partial',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){
       newPay2.id='local_'+Date.now(); payments.push(newPay2); saveToCache();
@@ -951,7 +951,7 @@ window.payMonths=async function(id,type='full'){
     const v=parseInt(document.getElementById('pay-advance-'+id).value);
     if(!v||v<1||v>12) return toast('Enter 1\u201312 months','error');
     const amt=v*t.fee;
-    if(!await confirm2('Advance Payment',`Pay <strong style="color:#f0f0f8">${fmt(amt)}</strong> advance for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${t.name}?<br><small style="color:var(--muted)">No dues for next ${v} month${v>1?'s':''}</small>`,'Pay',_CI.adv)) return;
+    if(!await confirm2('Advance Payment',`Pay <strong style="color:#f0f0f8">${fmt(amt)}</strong> advance for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${_escHtml(t.name)}?<br><small style="color:var(--muted)">No dues for next ${v} month${v>1?'s':''}</small>`,'Pay',_CI.adv)) return;
     const newPay3={teacherId:id,teacherName:t.name,subject:t.subject,monthsPaid:v,advanceMonths:v,amount:amt,type:'advance',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){
       newPay3.id='local_'+Date.now(); payments.push(newPay3); saveToCache();
@@ -979,7 +979,7 @@ window.deletePayment=async function(id){
 };
 window.deleteTeacher=async function(id){
   const t=teachers[id]; if(!t) return;
-  if(!await confirm2('Remove Teacher',`Remove <strong style="color:#f0f0f8">${t.name}</strong> and all history?`,'Remove',_CI.rem)) return;
+  if(!await confirm2('Remove Teacher',`Remove <strong style="color:#f0f0f8">${_escHtml(t.name)}</strong> and all history?`,'Remove',_CI.rem)) return;
   try{
     await Promise.all(payments.filter(p=>p.teacherId===id).map(p=>deleteDoc(pyDoc(p.id))));
     await deleteDoc(tcDoc(id));
@@ -991,7 +991,7 @@ window.deleteTeacher=async function(id){
 window.deleteBatch=async function(id){
   const b=batches[id];
   if(!b) return;
-  if(!await confirm2('Remove Batch',`Remove <strong style="color:#f0f0f8">${b.name}</strong>?`,'Remove',_CI.rem)) return;
+  if(!await confirm2('Remove Batch',`Remove <strong style="color:#f0f0f8">${_escHtml(b.name)}</strong>?`,'Remove',_CI.rem)) return;
   try {
     await deleteDoc(btDoc(id));
     delete batches[id];
@@ -3455,7 +3455,7 @@ window.tdsPayMonths = async function(type){
     const v = parseInt(document.getElementById('tds-pay-full')?.value);
     if(!v||v<1||v>dm) return toast('Enter 1\u2013'+dm,'error');
     const amt = v*t.fee;
-    if(!await confirm2('Confirm Payment',`Mark <strong style="color:#f0f0f8">${fmt(amt)}</strong> for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${t.name}?`,'Mark',_CI.pay)) return;
+    if(!await confirm2('Confirm Payment',`Mark <strong style="color:#f0f0f8">${fmt(amt)}</strong> for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${_escHtml(t.name)}?`,'Mark',_CI.pay)) return;
     const p={teacherId:id,teacherName:t.name,subject:t.subject,monthsPaid:v,amount:amt,type:'full',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){
       p.id='local_'+Date.now(); payments.push(p); saveToCache();
@@ -3471,7 +3471,7 @@ window.tdsPayMonths = async function(type){
     if(amt>=t.fee) return toast('Use Full tab for \u20b9'+t.fee+'+','error');
     const tot = partialBal(id)+amt;
     if(tot>=t.fee) return toast('Total covers full month — use Full tab','error');
-    if(!await confirm2('Partial Payment',`Record <strong style="color:#f0f0f8">${fmt(amt)}</strong> partial to ${t.name}?<br><small style="color:var(--muted)">Still owed: ${fmt((t.fee-tot))}</small>`,'Record',_CI.part)) return;
+    if(!await confirm2('Partial Payment',`Record <strong style="color:#f0f0f8">${fmt(amt)}</strong> partial to ${_escHtml(t.name)}?<br><small style="color:var(--muted)">Still owed: ${fmt((t.fee-tot))}</small>`,'Record',_CI.part)) return;
     const p={teacherId:id,teacherName:t.name,subject:t.subject,amount:amt,type:'partial',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){ p.id='local_'+Date.now(); payments.push(p); saveToCache(); addDoc(pyCol(),p).catch(()=>{}); toast('Partial '+fmt(amt)+' queued','success'); }
     else { const ref=await addDoc(pyCol(),p); p.id=ref.id; payments.push(p); saveToCache();
@@ -3481,7 +3481,7 @@ window.tdsPayMonths = async function(type){
     const v = parseInt(document.getElementById('tds-pay-advance')?.value);
     if(!v||v<1||v>12) return toast('Enter 1\u201312 months','error');
     const amt = v*t.fee;
-    if(!await confirm2('Advance Payment',`Pay <strong style="color:#f0f0f8">${fmt(amt)}</strong> advance for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${t.name}?`,'Pay',_CI.adv)) return;
+    if(!await confirm2('Advance Payment',`Pay <strong style="color:#f0f0f8">${fmt(amt)}</strong> advance for <strong style="color:#f0f0f8">${v} month${v>1?'s':''}</strong> to ${_escHtml(t.name)}?`,'Pay',_CI.adv)) return;
     const p={teacherId:id,teacherName:t.name,subject:t.subject,monthsPaid:v,advanceMonths:v,amount:amt,type:'advance',paidOn:po,timestamp:Date.now()};
     if(!navigator.onLine){ p.id='local_'+Date.now(); payments.push(p); saveToCache(); addDoc(pyCol(),p).catch(()=>{}); toast('Advance '+fmt(amt)+' queued','success'); }
     else { const ref=await addDoc(pyCol(),p); p.id=ref.id; payments.push(p); saveToCache();
@@ -3860,7 +3860,7 @@ function _renderHistory(){
   Object.keys(grps).sort().reverse().forEach(key => {
     const g = grps[key];
     out += `<div class="hist-month-group">
-      <div class="hist-month-label"><span>${g.label}</span><span class="hist-month-total">${fmt(g.total)}</span></div>`;
+      <div class="hist-month-label"><span>${_escHtml(g.label)}</span><span class="hist-month-total">${fmt(g.total)}</span></div>`;
     g.pays.forEach(p => {
       const t = p.type||'full', ic = ICON[t]||ICON.full;
       const d = p.paidOn ? `${p.paidOn.day||1} ${MONTHS[(p.paidOn.month||1)-1]}` : new Date(p.timestamp).toLocaleDateString(USER_LOCALE,{day:'numeric',month:'short'});
@@ -3869,8 +3869,8 @@ function _renderHistory(){
       out += `<div class="hist-row">
         <div class="hist-row-icon ${t}">${ic}</div>
         <div class="hist-row-body">
-          <div class="hist-row-name">${p._name}</div>
-          <div class="hist-row-sub">${sub2}${d?' · '+d:''}${mo}</div>
+          <div class="hist-row-name">${_escHtml(p._name)}</div>
+          <div class="hist-row-sub">${_escHtml(sub2)}${d?' · '+d:''}${mo}</div>
         </div>
         <div class="hist-row-amt">${fmt((p.amount||0))}</div>
       </div>`;
