@@ -43,11 +43,7 @@ export async function onRequest({ env, request }) {
     });
   }
 
-  // Use the actual Pages hostname as authDomain so the Firebase SDK routes
-  // /__/auth/* through our proxy on this domain instead of firebaseapp.com.
-  // On feetracker2.pages.dev this resolves to feetracker2.pages.dev;
-  // on feetracker.pages.dev it resolves to feetracker.pages.dev automatically.
-  const authDomain = new URL(request.url).hostname;
+  const authDomain = `${env.FB1_PROJECT_ID}.firebaseapp.com`;
 
   const config = {
     firebase: {
