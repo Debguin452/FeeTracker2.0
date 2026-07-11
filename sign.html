@@ -6,7 +6,7 @@
   <title>Sign In — Fee Tracker</title>
   <meta name="description" content="Sign in to Fee Tracker to track tuition fee payments, manage student batches, and stay on top of dues.">
   <meta name="robots" content="noindex, follow">
-  <link rel="canonical" href="https://feetracker2.pages.dev/sign.html">
+  <link rel="canonical" href="https://feetracker2.pages.dev/sign">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#080812" media="(prefers-color-scheme:dark)">
   <meta name="theme-color" content="#f0f0f8" media="(prefers-color-scheme:light)">
@@ -15,562 +15,458 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <script>
-    // Already signed in → app. But if app.html just bounced back HERE (its
-    // own last-resort timers gave up finding a real Firebase session), don't
-    // immediately bounce back to app.html again — that's an infinite,
-    // invisible ping-pong loop with no way out for the user. Break it after
-    // one round-trip instead: treat the session as invalid and show the
-    // normal sign-in form.
     try {
       if (sessionStorage.getItem('ft_bounce') === '1') {
         sessionStorage.removeItem('ft_bounce');
         localStorage.removeItem('ft_uid');
-        window._ft_showSessionExpired = true; // picked up once toast() exists below
+        window._ft_show_expired = true;
       } else if (localStorage.getItem('ft_uid')) {
-        location.replace('./app.html');
+        location.replace('./app');
       }
     } catch(e) {}
-    // Theme
     try {
-      var t=localStorage.getItem('ft_theme');
-      if(t?t!=='dark':!window.matchMedia('(prefers-color-scheme:dark)').matches)
+      var _t = localStorage.getItem('ft_theme');
+      if (_t ? _t !== 'dark' : !window.matchMedia('(prefers-color-scheme:dark)').matches)
         document.documentElement.classList.add('light');
-    } catch(e){}
+    } catch(e) {}
   </script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   <style>
-    /* Turnstile widget — styled to match the card */
-    .ts-wrap{
-      display:flex;
-      justify-content:center;
-      margin:16px 0 4px;
-      padding:12px;
-      background:var(--surface2);
-      border:1.5px solid var(--border);
-      border-radius:14px;
-      transition:border-color .2s;
-      width:100%;
-      box-sizing:border-box;
-      overflow:hidden;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #080812;
+      --surface: #0f0f1e;
+      --border:  rgba(255,255,255,.08);
+      --text:    #ebebf5;
+      --text2:   #8e8eb8;
+      --accent:  #7c6bff;
+      --accent2: rgba(124,107,255,.12);
+      --red:     #ff4d6d;
+      --green:   #00d4aa;
+      --input-bg: rgba(255,255,255,.04);
+      --input-border: rgba(255,255,255,.1);
+      --input-focus:  rgba(124,107,255,.5);
     }
-    #tsWidget{width:100%;display:flex;justify-content:center;}
-    .ts-wrap iframe{border-radius:6px!important;display:block;max-width:100%;}
-  
-    :root{--bg:#06060f;--surface:#0d0d1f;--surface2:#131328;--surface3:#1a1a35;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--accent:#7c6bff;--accent2:#ff6b9d;--accent3:#00d4aa;--accent-dim:rgba(124,107,255,.13);--text:#eeeef8;--text2:#8a8ab5;--muted:#4a4a72;--red:#ff4d6d;}
-    :root.light{--bg:#f0f0f8;--surface:#fff;--surface2:#e8e8f4;--surface3:#d8d8ee;--border:rgba(80,80,140,.09);--border2:rgba(80,80,140,.16);--accent:#6255e8;--accent2:#e8527a;--accent3:#00b894;--accent-dim:rgba(98,85,232,.12);--text:#18182e;--text2:#4e4e82;--muted:#8888b2;--red:#d63050;}
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased;}
-    input{user-select:text;-webkit-user-select:text;}
-
-    /* Blobs */
-    .blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
-    .blob1{width:600px;height:600px;top:-250px;left:-250px;background:radial-gradient(circle,rgba(124,107,255,.07),transparent 65%);}
-    .blob2{width:500px;height:500px;bottom:-200px;right:-200px;background:radial-gradient(circle,rgba(255,107,157,.05),transparent 65%);}
-    .blob3{width:300px;height:300px;top:45%;left:55%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,212,170,.03),transparent 65%);}
-
-    /* Card */
-    .card{position:relative;z-index:1;width:100%;max-width:380px;background:var(--surface);border:1.5px solid var(--border2);border-radius:24px;padding:32px 28px 28px;box-shadow:0 2px 0 rgba(255,255,255,.04),0 20px 60px rgba(0,0,0,.4);}
-    .logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:24px;}
-    .logo{width:68px;height:68px;border-radius:22px;overflow:hidden;box-shadow:0 8px 28px rgba(124,107,255,.22);}
-    .logo img{width:100%;height:100%;display:block;object-fit:cover;}
-    .logo-fallback{width:68px;height:68px;border-radius:22px;background:linear-gradient(135deg,var(--accent),#5240e0);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;box-shadow:0 8px 28px rgba(124,107,255,.22);}
-    .app-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-top:14px;}
-    .app-sub{font-size:13px;color:var(--text2);margin-top:4px;}
-
-    /* Tab row */
-    .tab-row{display:flex;background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:22px;}
-    .tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;border-radius:9px;cursor:pointer;color:var(--text2);transition:all .2s;}
-    .tab.active{background:var(--surface3);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2);}
-
-    /* Google button */
-    .google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:14px;padding:13px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
-    .google-btn:active{transform:scale(.98);background:var(--surface3);}
-    .google-btn:disabled{opacity:.55;cursor:not-allowed;}
-    .g-icon{width:18px;height:18px;flex-shrink:0;}
-
-    /* Divider */
-    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:12px;}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
-
-    /* Fields */
-    .field{margin-bottom:14px;}
-    .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;}
-    .field input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
-    .field input:focus{border-color:rgba(124,107,255,.5);}
-    .field input::placeholder{color:var(--muted);}
-    .field input.err{border-color:rgba(255,77,109,.5);}
-
-    /* Primary button */
-    .primary-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:13px;padding:13px;font-size:14px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;box-shadow:0 4px 18px rgba(124,107,255,.3);margin-top:4px;}
-    .primary-btn:active{transform:scale(.98);}
-    .primary-btn:disabled{opacity:.55;cursor:not-allowed;}
-
-    /* Initial-load gate — shown only while /api/config + Firebase init are
-       in flight, removed the moment both buttons are enabled (see script at
-       bottom). Deliberately NOT a :disabled selector: setBusy() already
-       injects its own <span class="ring"> spinner for actual sign-in
-       actions, and buttons get .disabled=true for mutual exclusion while
-       the other one is submitting (e.g. emailBtn during Google sign-in) —
-       a blanket :disabled selector fired on all three of those at once,
-       stacking multiple spinners on top of each other.
-       Also using visibility (rather than removing the icon) is important:
-       the Google "G" icon uses fixed per-path colors, not currentColor, so
-       hiding it via a :disabled rule would double as an accidental
-       always-on rule for legitimate mutual-exclusion disabling too.
-       */
-    .btn-init-loading::before{
-      content:'';display:inline-block;width:14px;height:14px;margin-right:8px;
-      border-radius:50%;vertical-align:-2px;animation:spin .65s linear infinite;
+    :root.light {
+      --bg:      #f0f0f8;
+      --surface: #ffffff;
+      --border:  rgba(0,0,0,.08);
+      --text:    #18182e;
+      --text2:   #5a5a8a;
+      --input-bg: rgba(0,0,0,.03);
+      --input-border: rgba(0,0,0,.12);
+      --input-focus:  rgba(124,107,255,.4);
     }
-    .primary-btn.btn-init-loading::before{border:2px solid rgba(255,255,255,.3);border-top-color:#fff;}
-    .google-btn.btn-init-loading::before{border:2px solid var(--border2);border-top-color:var(--text2);}
-    .google-btn.btn-init-loading .g-icon{display:none;}
-
-    /* Turnstile shimmer — the box is otherwise empty until the widget
-       script finishes loading, which reads as a broken/missing element */
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    #tsWidget:empty{
-      width:100%;height:65px;border-radius:6px;
-      background:linear-gradient(90deg,var(--surface3) 25%,var(--border2) 50%,var(--surface3) 75%);
-      background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+    body { display: flex; align-items: center; justify-content: center; padding: 16px; min-height: 100%; }
+    .card {
+      width: 100%; max-width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px 28px 28px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.4);
     }
-
-    /* Forgot / switch */
-    .link-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
-    .text-link{font-size:12px;color:var(--text2);cursor:pointer;text-decoration:underline;text-underline-offset:3px;background:none;border:none;font-family:'DM Sans',sans-serif;}
-    .text-link:hover{color:var(--accent);}
-
-    /* Legal consent note */
-    .legal-note{margin-top:18px;text-align:center;font-size:11px;color:var(--muted);line-height:1.6;}
-    .legal-note a{color:var(--text2);text-decoration:underline;text-underline-offset:2px;}
-    .legal-note a:hover{color:var(--accent);}
-
-    /* Error box */
-    .err-box{background:rgba(255,77,109,.09);border:1px solid rgba(255,77,109,.25);border-radius:11px;padding:10px 13px;font-size:12px;color:var(--red);line-height:1.55;margin-bottom:14px;white-space:pre-wrap;display:none;}
-    .err-box.show{display:block;}
-
-    /* Success box */
-    .ok-box{background:rgba(0,212,170,.09);border:1px solid rgba(0,212,170,.25);border-radius:11px;padding:10px 13px;font-size:12px;color:var(--accent3);line-height:1.55;margin-bottom:14px;display:none;}
-    .ok-box.show{display:block;}
-
-    /* Spinner */
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .ring{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;vertical-align:middle;margin-right:6px;}
-    .ring.dark{border-color:rgba(0,0,0,.15);border-top-color:var(--text2);}
-
-    /* Reset password panel */
-    #resetPanel{display:none;}
-
-    /* Fade in */
-    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-    .card{animation:fadeUp .35s ease both;}
-  
-    ._sign-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surface2);border:1px solid var(--border2);border-radius:50px;padding:10px 22px;font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:999;white-space:nowrap;}
-  ._sign-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  ._sign-toast.error{border-color:rgba(255,77,109,.35);color:var(--red);}
-</style>
+    .logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .logo-icon {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: linear-gradient(135deg, #7c6bff, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px rgba(124,107,255,.35);
+    }
+    .logo-icon svg { width: 32px; height: 32px; }
+    .logo-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .logo-sub { font-size: 13px; color: var(--text2); }
+    .tab-row { display: flex; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; padding: 3px; margin-bottom: 22px; }
+    .tab-btn { flex: 1; padding: 9px; border: none; background: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(124,107,255,.4); }
+    .google-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 13px; border-radius: 13px; border: 1px solid var(--input-border);
+      background: var(--input-bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; margin-bottom: 16px;
+    }
+    .google-btn:hover { border-color: var(--accent); background: var(--accent2); }
+    .google-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .google-btn:disabled .g-icon { display: none; }
+    .google-btn:disabled::before {
+      content: ''; display: inline-block; width: 16px; height: 16px; margin-right: 2px;
+      border: 2px solid var(--input-border); border-top-color: var(--text2);
+      border-radius: 50%; animation: spin .65s linear infinite; vertical-align: -3px;
+    }
+    .divider { display: flex; align-items: center; gap: 12px; color: var(--text2); font-size: 12px; margin-bottom: 16px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .field-label { font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px; }
+    .field { margin-bottom: 14px; }
+    .input {
+      width: 100%; padding: 13px 14px; border-radius: 12px;
+      border: 1px solid var(--input-border); background: var(--input-bg);
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px;
+      outline: none; transition: border-color .15s;
+    }
+    .input:focus { border-color: var(--input-focus); }
+    .input::placeholder { color: var(--text2); opacity: .6; }
+    .ts-wrap { margin-bottom: 14px; min-height: 65px; border-radius: 8px; overflow: hidden; }
+    .ts-wrap:empty {
+      background: linear-gradient(90deg, var(--input-bg) 25%, var(--input-border) 50%, var(--input-bg) 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite;
+    }
+    .primary-btn {
+      width: 100%; padding: 14px; border-radius: 13px; border: none;
+      background: var(--accent); color: #fff; font-family: 'Syne', sans-serif;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: all .15s;
+      box-shadow: 0 4px 18px rgba(124,107,255,.3); margin-top: 4px; margin-bottom: 16px;
+    }
+    .primary-btn:active { transform: scale(.98); }
+    .primary-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .primary-btn:disabled::before {
+      content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin .65s linear infinite; vertical-align: -2px;
+    }
+    .footer-row { display: flex; justify-content: space-between; align-items: center; }
+    .text-link { background: none; border: none; color: var(--text2); font-size: 13px; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+    .text-link:hover { color: var(--text); }
+    .err-box {
+      background: rgba(255,77,109,.1); border: 1px solid rgba(255,77,109,.3);
+      border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #ff4d6d;
+      margin-bottom: 14px; display: none; white-space: pre-line; line-height: 1.5;
+    }
+    .ok-box {
+      background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.3);
+      border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #00d4aa;
+      margin-bottom: 14px; display: none;
+    }
+    .reset-panel { display: none; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1c1c38; color: #ebebf5; padding: 12px 20px; border-radius: 12px;
+      font-size: 13px; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transition: transform .25s, opacity .25s; opacity: 0; pointer-events: none; z-index: 999; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.error { background: rgba(255,77,109,.9); }
+    .toast.success { background: rgba(0,212,170,.9); color: #fff; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @media (max-height: 700px) { .card { padding: 24px 20px 20px; } .logo-wrap { margin-bottom: 20px; } }
+  </style>
 </head>
 <body>
-<div class="blob blob1"></div>
-<div class="blob blob2"></div>
-<div class="blob blob3"></div>
-
-<div class="card">
-  <div class="logo-wrap">
-    <div class="logo" id="logoWrap">
-      <img src="icons/icon-512.png" alt="Fee Tracker"
-        onerror="this.parentElement.outerHTML='<div class=\'logo-fallback\'>&#8377;</div>'">
+  <div class="card">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <text x="10" y="38" font-size="34" fill="white" font-family="sans-serif">₹</text>
+        </svg>
+      </div>
+      <div class="logo-title">Fee Tracker</div>
+      <div class="logo-sub">Track tuition fee payments</div>
     </div>
-    <div class="app-name">Fee Tracker</div>
-    <div class="app-sub">Track tuition fee payments</div>
-  </div>
 
-  <!-- Main sign-in / register panels -->
-  <div id="mainPanel">
     <div class="tab-row">
-      <div class="tab active" id="tabSignin" onclick="switchMode('signin')">Sign In</div>
-      <div class="tab"        id="tabRegister" onclick="switchMode('register')">Register</div>
+      <button class="tab-btn active" id="tabSignin" onclick="setMode('signin')">Sign In</button>
+      <button class="tab-btn" id="tabRegister" onclick="setMode('register')">Register</button>
     </div>
 
-    <div class="err-box" id="errBox"></div>
-    <div class="ok-box"  id="okBox"></div>
-
-    <!-- Google -->
-    <button class="google-btn btn-init-loading" id="googleBtn" onclick="doGoogle()" disabled>
-      <svg class="g-icon" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    <button class="google-btn" id="googleBtn" onclick="doGoogle()">
+      <svg class="g-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        <path fill="none" d="M0 0h48v48H0z"/>
       </svg>
       Continue with Google
     </button>
 
     <div class="divider">or</div>
 
-    <!-- Email + password -->
+    <div id="errBox" class="err-box"></div>
+    <div id="okBox" class="ok-box"></div>
+
     <div class="field">
-      <label>Email</label>
-      <input type="email" id="emailInp" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')focusNext('passInp')"/>
+      <div class="field-label">Email</div>
+      <input class="input" id="emailInp" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email"/>
     </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="passInp" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doEmail()"/>
+    <div class="field" id="passField">
+      <div class="field-label">Password</div>
+      <input class="input" id="passInp" type="password" placeholder="••••••••" autocomplete="current-password"/>
     </div>
-    <!-- Confirm password shown only on register -->
-    <div class="field" id="confirmField" style="display:none;">
-      <label>Confirm Password</label>
-      <input type="password" id="confirmInp" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doEmail()"/>
-    </div>
-
-    <!-- Cloudflare Turnstile — bot protection for email/password flow -->
-    <div class="ts-wrap"><div id="tsWidget"></div></div>
-
-    <button class="primary-btn btn-init-loading" id="emailBtn" onclick="doEmail()" disabled>Sign In</button>
-
-    <div class="link-row">
-      <button class="text-link" id="forgotLink" onclick="showReset()">Forgot password?</button>
-      <button class="text-link" id="switchLink" onclick="switchMode('register')">Create account</button>
+    <div class="field" id="pass2Field" style="display:none">
+      <div class="field-label">Confirm Password</div>
+      <input class="input" id="pass2Inp" type="password" placeholder="••••••••" autocomplete="new-password"/>
     </div>
 
-    <div class="legal-note">By continuing, you agree to our <a href="terms.html">Terms</a> &amp; <a href="privacy.html">Privacy Policy</a>.</div>
+    <div class="ts-wrap" id="tsWidget"></div>
+
+    <button class="primary-btn" id="emailBtn" onclick="doEmail()">Sign In</button>
+
+    <div class="footer-row">
+      <button class="text-link" id="forgotBtn" onclick="showReset()">Forgot password?</button>
+      <button class="text-link" onclick="setMode(_mode === 'signin' ? 'register' : 'signin')" id="switchBtn">Create account</button>
+    </div>
+
+    <div class="reset-panel" id="resetPanel">
+      <div class="field" style="margin-top:16px">
+        <div class="field-label">Email to reset password</div>
+        <input class="input" id="resetEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <button class="primary-btn" id="resetBtn" onclick="doReset()">Send Reset Link</button>
+      <div style="text-align:center">
+        <button class="text-link" onclick="hideReset()">Back to sign in</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Password reset panel -->
-  <div id="resetPanel">
-    <div style="margin-bottom:18px;">
-      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;">Reset Password</div>
-      <div style="font-size:13px;color:var(--text2);">We'll send a reset link to your email.</div>
-    </div>
-    <div class="err-box" id="resetErrBox"></div>
-    <div class="ok-box"  id="resetOkBox"></div>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="resetEmailInp" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')doReset()"/>
-    </div>
-    <button class="primary-btn" id="resetBtn" onclick="doReset()">Send Reset Link</button>
-    <div style="margin-top:14px;text-align:center;">
-      <button class="text-link" onclick="showMain()">← Back to sign in</button>
-    </div>
-  </div>
-</div>
+  <div class="toast" id="_toast"></div>
 
-<script>
-  function focusNext(id){ document.getElementById(id)?.focus(); }
-  function showErr(id,msg){ var el=document.getElementById(id); el.textContent=msg; el.classList.toggle('show',!!msg); }
-  function showOk(id,msg){ var el=document.getElementById(id); el.textContent=msg; el.classList.toggle('show',!!msg); }
-  function clearMsgs(){ showErr('errBox',''); showOk('okBox',''); }
+  <script type="module">
+    import { initializeApp }      from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+             getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+             sendPasswordResetEmail, browserLocalPersistence, setPersistence,
+             onAuthStateChanged }  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-  var _mode='signin';
-  function switchMode(m){
-    _mode=m;
-    clearMsgs();
-    document.getElementById('tabSignin').classList.toggle('active',m==='signin');
-    document.getElementById('tabRegister').classList.toggle('active',m==='register');
-    document.getElementById('confirmField').style.display=m==='register'?'':'none';
-    document.getElementById('emailBtn').textContent=m==='signin'?'Sign In':'Create Account';
-    document.getElementById('forgotLink').style.display=m==='signin'?'':'none';
-    document.getElementById('switchLink').textContent=m==='signin'?'Create account':'Already have an account?';
-    document.getElementById('switchLink').onclick=function(){ switchMode(m==='signin'?'register':'signin'); };
-    document.getElementById('passInp').setAttribute('autocomplete', m==='register'?'new-password':'current-password');
-  }
-  function showReset(){
-    document.getElementById('mainPanel').style.display='none';
-    document.getElementById('resetPanel').style.display='';
-    var e=document.getElementById('emailInp').value;
-    if(e) document.getElementById('resetEmailInp').value=e;
-    document.getElementById('resetEmailInp').focus();
-  }
-  function showMain(){
-    document.getElementById('resetPanel').style.display='none';
-    document.getElementById('mainPanel').style.display='';
-    showErr('resetErrBox',''); showOk('resetOkBox','');
-  }
-</script>
+    let auth, _mode = 'signin', _tsToken = null, _tsWidgetId = null, _toastTid = null;
+    let _redirectHandled = false;
 
-<script type="module">
-import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getAuth, onAuthStateChanged,
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  sendPasswordResetEmail, browserLocalPersistence, setPersistence
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-/* ── Turnstile ───────────────────────────────────────────────────────────── */
-const TURNSTILE_SITE_KEY = '0x4AAAAAADiGfoToJrkcuTCv';
-let _tsToken = null;
-let _tsWidgetId = null;
-
-function initTurnstile() {
-  if (typeof turnstile === 'undefined') {
-    // SDK not loaded yet — wait and retry
-    setTimeout(initTurnstile, 300);
-    return;
-  }
-  if (_tsWidgetId !== null) return;
-  _tsWidgetId = turnstile.render('#tsWidget', {
-    sitekey: TURNSTILE_SITE_KEY,
-    theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
-    size: 'flexible',
-    callback: (token) => { _tsToken = token; },
-    'expired-callback': () => { _tsToken = null; },
-    'error-callback': () => { _tsToken = null; },
-  });
-}
-
-// Wait for DOM + Turnstile SDK
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initTurnstile);
-} else {
-  initTurnstile();
-}
-
-async function verifyTurnstile() {
-  if (!_tsToken) return false;
-  try {
-    const res = await fetch('/api/verify-turnstile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: _tsToken }),
-    });
-    const data = await res.json();
-    return data.success === true;
-  } catch {
-    return false; // fail closed — network error blocks sign-in
-  }
-}
-
-/* ── Init ─────────────────────────────────────────────────────────────────── */
-let auth;
-try {
-  const res = await fetch('/api/config');
-  if (!res.ok) throw new Error('Config ' + res.status);
-  const cfg = await res.json();
-  const app = initializeApp(cfg.firebase.primary);
-  auth = getAuth(app);
-  await setPersistence(auth, browserLocalPersistence).catch(()=>{});
-} catch(e) {
-  document.querySelector('.card').innerHTML =
-    '<div style="text-align:center;padding:20px 0;">' +
-    '<div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px;">Failed to load config</div>' +
-    '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Check your connection.</div>' +
-    '<button onclick="location.reload()" style="padding:11px 28px;border-radius:12px;background:var(--accent);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;">Retry</button>' +
-    '</div>';
-  throw e;
-}
-
-/* ── Where to go after sign-in ───────────────────────────────────────────── */
-function redirect() {
-  try {
-    const dest = sessionStorage.getItem('ft_returnTo') || './app.html';
-    sessionStorage.removeItem('ft_returnTo');
-    location.replace(dest);
-  } catch(e) { location.replace('./app.html'); }
-}
-
-/* ── Toast notification ─────────────────────────────────────────────────── */
-let _toastTimer = null;
-function toast(msg, type) {
-  const t = document.getElementById('_signToast');
-  if (!t) return;
-  if (_toastTimer) { clearTimeout(_toastTimer); t.className = '_sign-toast'; void t.offsetWidth; }
-  t.textContent = msg;
-  t.className = '_sign-toast show' + (type ? ' ' + type : '');
-  _toastTimer = setTimeout(() => { t.className = '_sign-toast'; _toastTimer = null; }, 3000);
-}
-if (window._ft_showSessionExpired) toast('Your session expired — please sign in again.', 'error');
-
-/* ── Auth state: if already signed in → redirect immediately ─────────────── */
-let _redirected = false;
-onAuthStateChanged(auth, user => {
-  if (user && !_redirected) {
-    _redirected = true;
-    try { localStorage.setItem('ft_uid', user.uid); localStorage.removeItem('ft_signed_out'); } catch{}
-    redirect();
-  }
-});
-
-/* ── Handle returning from signInWithRedirect ────────────────────────────── */
-(async () => {
-  try {
-    const r = await getRedirectResult(auth);
-    if (r?.user) {
-      // onAuthStateChanged will fire and redirect — nothing to do here
+    function toast(msg, type) {
+      const el = document.getElementById('_toast');
+      if (_toastTid) { clearTimeout(_toastTid); el.className = 'toast'; void el.offsetWidth; }
+      el.textContent = msg;
+      el.className = 'toast show' + (type ? ' ' + type : '');
+      _toastTid = setTimeout(() => { el.className = 'toast'; _toastTid = null; }, 3500);
     }
-  } catch(e) {
-    const skip = ['auth/no-current-user', 'auth/null-user'];
-    if (e.code && !skip.includes(e.code)) {
-      const msg = errMsg(e.code);
-      showErr('errBox', msg || 'Sign-in failed: ' + e.code);
+
+    if (window._ft_show_expired) toast('Session expired — please sign in again.', 'error');
+
+    function showErr(msg) {
+      const el = document.getElementById('errBox');
+      el.textContent = msg; el.style.display = msg ? '' : 'none';
+      document.getElementById('okBox').style.display = 'none';
     }
-  }
-})();
+    function showOk(msg) {
+      const el = document.getElementById('okBox');
+      el.textContent = msg; el.style.display = msg ? '' : 'none';
+      document.getElementById('errBox').style.display = 'none';
+    }
+    function clearMsgs() { showErr(''); showOk(''); }
 
-/* ── Error messages ──────────────────────────────────────────────────────── */
-function errMsg(code) {
-  const m = {
-    'auth/user-not-found':          'No account found for that email.',
-    'auth/wrong-password':          'Incorrect password.',
-    'auth/invalid-credential':      'Incorrect email or password.',
-    'auth/email-already-in-use':    'An account already exists with this email.',
-    'auth/weak-password':           'Password must be at least 8 characters with a letter and a number.',
-    'auth/invalid-email':           'Enter a valid email address.',
-    'auth/too-many-requests':       'Too many attempts. Please wait and try again.',
-    'auth/network-request-failed':  'Network error — check your connection.',
-    'auth/unauthorized-domain':
-      'Domain not authorised in Firebase.\n' +
-      'Firebase Console → Authentication → Authorized domains → add: ' + location.hostname,
-    'auth/operation-not-allowed':
-      'This sign-in method is not enabled.\nFirebase Console → Authentication → Sign-in method.',
-    'auth/popup-closed-by-user':    null,
-    'auth/cancelled-popup-request': null,
-    'auth/user-cancelled':          null,
-  };
-  return m[code] !== undefined ? m[code] : 'Error: ' + (code || 'unknown');
-}
+    function setBusy(id, busy, label) {
+      const btn = document.getElementById(id);
+      btn.disabled = busy;
+      if (!busy) btn.textContent = label;
+    }
 
-function setBusy(id, busy, label) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.disabled = busy;
-  el.innerHTML = busy
-    ? '<span class="ring"></span>' + label + '…'
-    : label;
-}
+    function lockAll() {
+      document.getElementById('googleBtn').disabled = true;
+      document.getElementById('emailBtn').disabled  = true;
+    }
+    function unlockAll() {
+      document.getElementById('googleBtn').disabled = false;
+      document.getElementById('emailBtn').disabled  = false;
+    }
 
-/* ── Google sign-in ──────────────────────────────────────────────────────── */
-window.doGoogle = async function() {
-  clearMsgs();
+    window.setMode = function(m) {
+      _mode = m;
+      document.getElementById('tabSignin').classList.toggle('active', m === 'signin');
+      document.getElementById('tabRegister').classList.toggle('active', m === 'register');
+      document.getElementById('pass2Field').style.display = m === 'register' ? '' : 'none';
+      document.getElementById('emailBtn').textContent = m === 'signin' ? 'Sign In' : 'Create Account';
+      document.getElementById('switchBtn').textContent = m === 'signin' ? 'Create account' : 'Back to sign in';
+      document.getElementById('forgotBtn').style.display = m === 'signin' ? '' : 'none';
+      clearMsgs();
+      hideReset();
+    };
 
-  // ── Turnstile verification — was missing entirely; only doEmail() had it ──
-  if (!_tsToken) {
-    showErr('errBox', 'Please complete the security check above.');
-    return;
-  }
-  setBusy('googleBtn', true, 'Continue with Google');
-  document.getElementById('emailBtn').disabled = true;
-  const tsOk = await verifyTurnstile();
-  if (!tsOk) {
-    showErr('errBox', 'Security check failed. Please refresh and try again.');
-    setBusy('googleBtn', false, 'Continue with Google');
-    document.getElementById('emailBtn').disabled = false;
-    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
-    _tsToken = null;
-    return;
-  }
+    window.showReset = function() {
+      document.getElementById('resetPanel').style.display = '';
+      document.getElementById('forgotBtn').style.display = 'none';
+    };
+    window.hideReset = function() {
+      document.getElementById('resetPanel').style.display = 'none';
+      document.getElementById('forgotBtn').style.display = _mode === 'signin' ? '' : 'none';
+    };
 
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  try {
-    if (isMobile) { await signInWithRedirect(auth, provider); return; }
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    if (['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
-      try { await signInWithRedirect(auth, provider); return; } catch(re) {
-        const rm = errMsg(re.code);
-        if (rm) showErr('errBox', rm);
-        setBusy('googleBtn', false, 'Continue with Google');
-        document.getElementById('emailBtn').disabled = false;
+    function initTurnstile() {
+      if (typeof turnstile === 'undefined') { setTimeout(initTurnstile, 300); return; }
+      _tsWidgetId = turnstile.render('#tsWidget', {
+        sitekey: '0x4AAAAAADiGfoToJrkcuTCv',
+        callback: t => { _tsToken = t; },
+        'expired-callback': () => { _tsToken = null; },
+        'error-callback':   () => { _tsToken = null; },
+        theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTurnstile);
+    else initTurnstile();
+
+    async function verifyTs() {
+      if (!_tsToken) { showErr('Please complete the security check.'); return false; }
+      try {
+        const r = await fetch('/api/verify-turnstile', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: _tsToken }),
+        });
+        const d = await r.json();
+        return d.success === true;
+      } catch { return false; }
+    }
+
+    function resetTs() {
+      _tsToken = null;
+      if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
+    }
+
+    function errMsg(code) {
+      return ({
+        'auth/user-not-found':         'No account found for that email.',
+        'auth/wrong-password':         'Incorrect password.',
+        'auth/invalid-credential':     'Incorrect email or password.',
+        'auth/email-already-in-use':   'An account already exists with this email.',
+        'auth/weak-password':          'Password must be at least 6 characters.',
+        'auth/invalid-email':          'Enter a valid email address.',
+        'auth/too-many-requests':      'Too many attempts — please wait and try again.',
+        'auth/network-request-failed': 'Network error — check your connection.',
+        'auth/popup-closed-by-user':   '',
+        'auth/cancelled-popup-request':'',
+        'auth/user-cancelled':         '',
+      })[code] ?? ('Sign-in error: ' + (code || 'unknown'));
+    }
+
+    function goApp() {
+      const dest = sessionStorage.getItem('ft_returnTo') || './app';
+      sessionStorage.removeItem('ft_returnTo');
+      try { location.replace(dest); } catch { location.replace('./app'); }
+    }
+
+    async function boot() {
+      let cfg;
+      try {
+        const res = await fetch('/api/config');
+        cfg = await res.json();
+      } catch {
+        showErr('Cannot reach server — check your connection.'); unlockAll(); return;
       }
-      return;
+
+      const app = initializeApp(cfg.firebase.primary);
+      auth = getAuth(app);
+
+      await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+      onAuthStateChanged(auth, user => {
+        if (user && !_redirectHandled) {
+          _redirectHandled = true;
+          try { localStorage.setItem('ft_uid', user.uid); localStorage.removeItem('ft_signed_out'); } catch {}
+          goApp();
+        } else if (!user && !_redirectHandled) {
+          unlockAll();
+        }
+      });
+
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          _redirectHandled = true;
+          try { localStorage.setItem('ft_uid', result.user.uid); } catch {}
+          goApp();
+        }
+      } catch(e) {
+        const msg = errMsg(e.code);
+        if (msg) showErr(msg);
+        resetTs();
+        unlockAll();
+      }
     }
-    const msg = errMsg(e.code);
-    if (msg) showErr('errBox', msg);
-    setBusy('googleBtn', false, 'Continue with Google');
-    document.getElementById('emailBtn').disabled = false;
-  }
-};
 
-/* ── Email / password ────────────────────────────────────────────────────── */
-window.doEmail = async function() {
-  clearMsgs();
-  const email   = document.getElementById('emailInp').value.trim();
-  const pass    = document.getElementById('passInp').value;
-  const confirm = document.getElementById('confirmInp').value;
-  if (!email) { showErr('errBox', 'Enter your email address.'); document.getElementById('emailInp').focus(); return; }
-  if (!pass)  { showErr('errBox', 'Enter your password.'); document.getElementById('passInp').focus(); return; }
-  if (_mode === 'register') {
-    if (pass.length < 8) { showErr('errBox', 'Password must be at least 8 characters.'); return; }
-    if (!/[a-zA-Z]/.test(pass) || !/[0-9]/.test(pass)) { showErr('errBox', 'Password must contain at least one letter and one number.'); return; }
-    if (pass !== confirm) { showErr('errBox', 'Passwords do not match.'); document.getElementById('confirmInp').focus(); return; }
-  }
+    boot();
 
-  // ── Turnstile verification ─────────────────────────────────────────────
-  if (!_tsToken) {
-    showErr('errBox', 'Please complete the security check above.');
-    return;
-  }
-  setBusy('emailBtn', true, _mode === 'signin' ? 'Sign In' : 'Create Account');
-  document.getElementById('googleBtn').disabled = true;
-  const tsOk = await verifyTurnstile();
-  if (!tsOk) {
-    showErr('errBox', 'Security check failed. Please refresh and try again.');
-    setBusy('emailBtn', false, _mode === 'signin' ? 'Sign In' : 'Create Account');
-    document.getElementById('googleBtn').disabled = false;
-    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
-    _tsToken = null;
-    return;
-  }
+    window.doGoogle = async function() {
+      clearMsgs();
+      if (!_tsToken) { showErr('Please complete the security check first.'); return; }
+      lockAll();
+      const ok = await verifyTs();
+      if (!ok) { showErr('Security check failed — please try again.'); resetTs(); unlockAll(); return; }
+      const provider = new GoogleAuthProvider();
+      provider.addScope('profile');
+      provider.addScope('email');
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      try {
+        if (isMobile) {
+          await signInWithRedirect(auth, provider);
+        } else {
+          const result = await signInWithPopup(auth, provider);
+          if (result?.user) {
+            _redirectHandled = true;
+            try { localStorage.setItem('ft_uid', result.user.uid); } catch {}
+            goApp();
+          }
+        }
+      } catch(e) {
+        const msg = errMsg(e.code);
+        if (msg) showErr(msg);
+        resetTs(); unlockAll();
+      }
+    };
 
-  try {
-    if (_mode === 'signin') {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } else {
-      await createUserWithEmailAndPassword(auth, email, pass);
-    }
-    // onAuthStateChanged fires → redirects
-  } catch(e) {
-    // Always re-enable UI first so the user is never stuck
-    setBusy('emailBtn', false, _mode === 'signin' ? 'Sign In' : 'Create Account');
-    document.getElementById('googleBtn').disabled = false;
-    if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
-    _tsToken = null;
-    const msg = errMsg(e.code);
-    showErr('errBox', msg || ('Sign-in failed: ' + (e.code || e.message || 'unknown')));
-  }
-};
+    window.doEmail = async function() {
+      clearMsgs();
+      const email = document.getElementById('emailInp').value.trim();
+      const pass  = document.getElementById('passInp').value;
+      if (!email) { showErr('Enter your email.'); return; }
+      if (!pass)  { showErr('Enter your password.'); return; }
+      if (_mode === 'register') {
+        const pass2 = document.getElementById('pass2Inp').value;
+        if (pass !== pass2) { showErr('Passwords do not match.'); return; }
+        if (pass.length < 6) { showErr('Password must be at least 6 characters.'); return; }
+      }
+      if (!_tsToken) { showErr('Please complete the security check first.'); return; }
+      lockAll();
+      const ok = await verifyTs();
+      if (!ok) { showErr('Security check failed — please try again.'); resetTs(); unlockAll(); return; }
+      try {
+        const cred = _mode === 'signin'
+          ? await signInWithEmailAndPassword(auth, email, pass)
+          : await createUserWithEmailAndPassword(auth, email, pass);
+        _redirectHandled = true;
+        try { localStorage.setItem('ft_uid', cred.user.uid); } catch {}
+        goApp();
+      } catch(e) {
+        const msg = errMsg(e.code);
+        if (msg) showErr(msg);
+        resetTs(); unlockAll();
+      }
+    };
 
-/* ── Password reset ──────────────────────────────────────────────────────── */
-window.doReset = async function() {
-  showErr('resetErrBox',''); showOk('resetOkBox','');
-  const email = document.getElementById('resetEmailInp').value.trim();
-  if (!email) { showErr('resetErrBox', 'Enter your email address.'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('resetErrBox', 'Enter a valid email address.'); return; }
-  setBusy('resetBtn', true, 'Send Reset Link');
-  try {
-    // Without actionCodeSettings, Firebase sends the User back to a bare,
-    // unbranded confirmation screen after they reset their password, with no
-    // way back into the app. Point `url` at this same page (on whichever
-    // domain issued the request — feetracker2.pages.dev today, feetracker.pages.dev
-    // after migration) so the "Continue" link on the reset page returns here.
-    await sendPasswordResetEmail(auth, email, {
-      url: location.origin + '/sign.html',
-      handleCodeInApp: false,
+    window.doReset = async function() {
+      const email = document.getElementById('resetEmail').value.trim();
+      if (!email) { toast('Enter your email first.', 'error'); return; }
+      setBusy('resetBtn', true, 'Send Reset Link');
+      try {
+        await sendPasswordResetEmail(auth, email, { url: location.origin + '/sign' });
+        showOk('Reset link sent — check your inbox.');
+        hideReset();
+        toast('Reset email sent!', 'success');
+      } catch(e) {
+        const msg = errMsg(e.code);
+        toast(msg || 'Could not send reset email.', 'error');
+      }
+      setBusy('resetBtn', false, 'Send Reset Link');
+    };
+
+    document.getElementById('emailInp').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('passInp').focus(); }
     });
-    // Same message on true success and on "account doesn't exist" below —
-    // the wording must be identical in both cases, otherwise the response
-    // text itself reveals which emails are registered.
-    showOk('resetOkBox', 'If that email exists, a reset link has been sent.');
-  } catch(e) {
-    const code = e.code;
-    if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
-      showOk('resetOkBox', 'If that email exists, a reset link has been sent.');
-    } else {
-      showErr('resetErrBox', errMsg(code) || 'Failed to send reset email. Please try again.');
-    }
-  } finally {
-    setBusy('resetBtn', false, 'Send Reset Link');
-  }
-};
-
-// All handlers ready — enable sign-in buttons
-document.getElementById('googleBtn').disabled = false;
-document.getElementById('googleBtn').classList.remove('btn-init-loading');
-document.getElementById('emailBtn').disabled  = false;
-document.getElementById('emailBtn').classList.remove('btn-init-loading');
-</script>
-<div id="_signToast" class="_sign-toast"></div>
+    document.getElementById('passInp').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); window.doEmail(); }
+    });
+    document.getElementById('pass2Inp').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); window.doEmail(); }
+    });
+    document.getElementById('resetEmail').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); window.doReset(); }
+    });
+  </script>
 </body>
 </html>
