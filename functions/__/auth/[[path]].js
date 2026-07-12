@@ -75,7 +75,6 @@ export async function onRequest(context) {
   rh.delete('Cross-Origin-Opener-Policy');
   rh.delete('Cross-Origin-Embedder-Policy');
   rh.delete('X-Content-Type-Options');
-  rh.delete('Set-Cookie');
   rh.delete('Content-Length');
   rh.delete('Content-Encoding');
   rh.delete('Transfer-Encoding');
