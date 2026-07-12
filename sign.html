@@ -233,23 +233,9 @@
              sendPasswordResetEmail, browserLocalPersistence, setPersistence,
              onAuthStateChanged }  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-    const FIREBASE_CONFIG = {
-      apiKey:            'AIzaSyDlpLbd5g78eHv_elhiiLRlOdhPMvn9ijA',
-      authDomain:        'fee-tracker-f32f8.firebaseapp.com',
-      projectId:         'fee-tracker-f32f8',
-      storageBucket:     'fee-tracker-f32f8.firebasestorage.app',
-      messagingSenderId: '1061066310105',
-      appId:             '1:1061066310105:web:4ca8c0feaa9d6614cd19c8',
-    };
-
-    const _app  = initializeApp(FIREBASE_CONFIG);
-    const auth  = getAuth(_app);
-    setPersistence(auth, browserLocalPersistence).catch(() => {});
-
-    const _redirectResultPromise = getRedirectResult(auth);
-
     let _mode = 'signin', _tsToken = null, _tsWidgetId = null, _toastTid = null;
     let _redirectHandled = false;
+    let auth;
 
     function toast(msg, type) {
       const el = document.getElementById('_toast');
@@ -362,8 +348,20 @@
     }
 
     async function boot() {
+      let cfg;
       try {
-        const result = await _redirectResultPromise;
+        const res = await fetch('/api/config');
+        cfg = await res.json();
+      } catch {
+        showErr('Cannot reach server — check your connection.'); unlockAll(); return;
+      }
+
+      const app = initializeApp(cfg.firebase.primary);
+      auth = getAuth(app);
+      await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+      try {
+        const result = await getRedirectResult(auth);
         if (result?.user) {
           _redirectHandled = true;
           try { localStorage.setItem('ft_uid', result.user.uid); } catch {}
