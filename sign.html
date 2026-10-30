@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <script src="js/authGuard.js"></script>
   <script>
     try {
       if (sessionStorage.getItem('ft_bounce') === '1') {
@@ -21,7 +22,14 @@
         localStorage.removeItem('ft_uid');
         window._ft_show_expired = true;
       } else if (localStorage.getItem('ft_uid')) {
-        location.replace('./app');
+        var _b = window.FTAuthGuard.registerBounce(sessionStorage, Date.now(), 'signToApp');
+        if (_b.blocked) {
+          localStorage.removeItem('ft_uid');
+          window.FTAuthGuard.clearBounceGuard(sessionStorage, 'signToApp');
+          window._ft_show_stuck = true;
+        } else {
+          location.replace('./app');
+        }
       }
     } catch(e) {}
     try {
@@ -246,6 +254,7 @@
     }
 
     if (window._ft_show_expired) toast('Session expired — please sign in again.', 'error');
+    if (window._ft_show_stuck) showErr('We couldn\u2019t keep you signed in after several attempts. Please try signing in again. If this keeps happening, try reloading the page or clearing this site\u2019s data (Site settings \u2192 Clear data).');
 
     function showErr(msg) {
       const el = document.getElementById('errBox');
@@ -344,6 +353,14 @@
     function goApp() {
       const dest = sessionStorage.getItem('ft_returnTo') || './app';
       sessionStorage.removeItem('ft_returnTo');
+      const b = window.FTAuthGuard.registerBounce(sessionStorage, Date.now(), 'signToApp');
+      if (b.blocked) {
+        try { localStorage.removeItem('ft_uid'); } catch {}
+        window.FTAuthGuard.clearBounceGuard(sessionStorage, 'signToApp');
+        showErr('We couldn\u2019t keep you signed in after several attempts. Please try signing in again. If this keeps happening, try reloading the page or clearing this site\u2019s data (Site settings \u2192 Clear data).');
+        unlockAll();
+        return;
+      }
       try { location.replace(dest); } catch { location.replace('./app'); }
     }
 

@@ -14,6 +14,7 @@ const SHELL_ASSETS = [
   './privacy.html',
   './terms.html',
   './css/app.css',
+  './js/authGuard.js',
   './js/app.js',
   './js/pwa.js',
   './js/theme.js',
