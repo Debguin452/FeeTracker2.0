@@ -327,21 +327,13 @@ self.addEventListener('fetch', event => {
 
 async function swrShell(request) {
   const cache = await caches.open(SHELL_CACHE);
-  const ctrl  = new AbortController();
-  const tid   = setTimeout(() => ctrl.abort(), 2500);
   let networkRes = null;
   try {
-    // IMPORTANT: navigation requests arrive with redirect:'manual' (spec
-    // default for FetchEvent navigations). new Request(request,{...}) with
-    // only `signal` set inherits that mode silently. Cloudflare Pages
-    // 308-redirects .html paths to their clean-URL form (e.g. /sign.html ->
-    // /sign), so fetch() then returns an opaqueredirect response — which
-    // Chrome refuses to let respondWith() use, producing ERR_FAILED /
-    // "This site can't be reached" instead of the actual page. Forcing
-    // redirect:'follow' here makes the SW follow it like a normal browser
-    // request would.
-    networkRes = await fetch(new Request(request, { signal: ctrl.signal, redirect: 'follow' }));
-    clearTimeout(tid);
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('shell-timeout')), 2500));
+    networkRes = await Promise.race([fetch(request), timeout]);
+
+    if (networkRes.type === 'opaqueredirect') return networkRes;
+
     if (networkRes.ok) {
       cache.put(request, networkRes.clone());
       // Only alias as index.html for the root/index requests
@@ -351,7 +343,7 @@ async function swrShell(request) {
       }
       return networkRes;
     }
-  } catch { clearTimeout(tid); }
+  } catch {}
   const cached = await cache.match(request) || await cache.match('./index.html') || await cache.match('./');
   if (cached) return cached;
   return new Response(
