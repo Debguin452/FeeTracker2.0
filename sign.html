@@ -38,7 +38,6 @@
         document.documentElement.classList.add('light');
     } catch(e) {}
   </script>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -211,8 +210,6 @@
       <input class="input" id="pass2Inp" type="password" placeholder="••••••••" autocomplete="new-password"/>
     </div>
 
-    <div class="ts-wrap" id="tsWidget"></div>
-
     <button class="primary-btn" id="emailBtn" onclick="doEmail()">Sign In</button>
 
     <div class="footer-row">
@@ -241,7 +238,7 @@
              sendPasswordResetEmail, browserLocalPersistence, setPersistence,
              onAuthStateChanged }  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-    let _mode = 'signin', _tsToken = null, _tsWidgetId = null, _toastTid = null;
+    let _mode = 'signin', _toastTid = null;
     let _redirectHandled = false;
     let auth;
 
@@ -304,36 +301,6 @@
       document.getElementById('forgotBtn').style.display = _mode === 'signin' ? '' : 'none';
     };
 
-    function initTurnstile() {
-      if (typeof turnstile === 'undefined') { setTimeout(initTurnstile, 300); return; }
-      _tsWidgetId = turnstile.render('#tsWidget', {
-        sitekey: '0x4AAAAAADiGfoToJrkcuTCv',
-        callback: t => { _tsToken = t; },
-        'expired-callback': () => { _tsToken = null; },
-        'error-callback':   () => { _tsToken = null; },
-        theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
-      });
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTurnstile);
-    else initTurnstile();
-
-    async function verifyTs() {
-      if (!_tsToken) { showErr('Please complete the security check.'); return false; }
-      try {
-        const r = await fetch('/api/verify-turnstile', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: _tsToken }),
-        });
-        const d = await r.json();
-        return d.success === true;
-      } catch { return false; }
-    }
-
-    function resetTs() {
-      _tsToken = null;
-      if (typeof turnstile !== 'undefined' && _tsWidgetId !== null) turnstile.reset(_tsWidgetId);
-    }
-
     function errMsg(code) {
       return ({
         'auth/user-not-found':         'No account found for that email.',
@@ -388,7 +355,6 @@
       } catch(e) {
         const msg = errMsg(e.code);
         if (msg) showErr(msg);
-        resetTs();
       }
 
       onAuthStateChanged(auth, user => {
@@ -406,10 +372,7 @@
 
     window.doGoogle = async function() {
       clearMsgs();
-      if (!_tsToken) { showErr('Please complete the security check first.'); return; }
       lockAll();
-      const ok = await verifyTs();
-      if (!ok) { showErr('Security check failed — please try again.'); resetTs(); unlockAll(); return; }
       const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
@@ -428,7 +391,7 @@
       } catch(e) {
         const msg = errMsg(e.code);
         if (msg) showErr(msg);
-        resetTs(); unlockAll();
+        unlockAll();
       }
     };
 
@@ -443,10 +406,7 @@
         if (pass !== pass2) { showErr('Passwords do not match.'); return; }
         if (pass.length < 6) { showErr('Password must be at least 6 characters.'); return; }
       }
-      if (!_tsToken) { showErr('Please complete the security check first.'); return; }
       lockAll();
-      const ok = await verifyTs();
-      if (!ok) { showErr('Security check failed — please try again.'); resetTs(); unlockAll(); return; }
       try {
         const cred = _mode === 'signin'
           ? await signInWithEmailAndPassword(auth, email, pass)
@@ -457,7 +417,7 @@
       } catch(e) {
         const msg = errMsg(e.code);
         if (msg) showErr(msg);
-        resetTs(); unlockAll();
+        unlockAll();
       }
     };
 
